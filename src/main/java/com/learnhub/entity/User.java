@@ -14,51 +14,50 @@ import java.util.List;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY) // Auto-increment primary key
+    @GeneratedValue(strategy = GenerationType.IDENTITY) 
     private Long id;
 
-    @Column(nullable = false, unique = true) // Email must be unique
+    @Column(nullable = false, unique = true) 
     private String email;
 
     @Column(nullable = false)
-    private String password; // Stored as a BCrypt hash, never plain text
+    private String password; 
 
-	@Column(name = "oauth_provider")  //google, github or facebook
+	@Column(name = "oauth_provider")  
     private String oauthProvider;
 
-    @Column(name = "oauth_id")   // user's unique id from google etc.
+    @Column(name = "oauth_id")  
     private String oauthId;
  
-    private String name; // user's full name from google provider
+    private String name; 
     @Column(name = "profile_image_url")
-    private String profileImageUrl; // Google profile picture URL
+    private String profileImageUrl; 
 
     @Column(name = "profile_image")
-    private String profileImage; // Stores the filename of uploaded image
+    private String profileImage; 
     
-    @Enumerated(EnumType.STRING) // Store role as "ADMIN" or "USER" string in DB
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
 
-    // One user can have many progress records (one per topic)
+   
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Progress> progressList = new ArrayList<>();
-    
-    //User-Dashboard
+
     @Column(name = "last_active_date")
     private java.time.LocalDate lastActiveDate;
 
     @Column(name = "streak_count")
     private Integer streakCount = 0;
 
-    /** Cached total XP — updated atomically alongside every XpEvent insert. */
+ 
     @Column(name = "total_xp", nullable = false, columnDefinition = "integer not null default 0")
     private int totalXp = 0;
     
-    // --- Constructors ---
+
 
     public User() {
-        // Default constructor 
+        
     }
 
     public User(String email, String password, Role role) {
@@ -67,7 +66,6 @@ public class User {
         this.role = role;
     }
 
-    // --- Getters and Setters ---
 
     public Long getId() {
         return id;

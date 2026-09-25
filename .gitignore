@@ -1,14 +1,42 @@
+# === Build output ===
 target/
 *.class
-*.jar
-*.war
-*.log
 
-# IDE
+# === IDE — Eclipse / STS ===
+.settings/
+.classpath
+.project
+bin/
+
+# === IDE — IntelliJ ===
 .idea/
 *.iml
-.vscode/
-*.DS_Store
+out/
 
-# Spring Boot local overrides (keep these local only)
+# === IDE — VS Code ===
+.vscode/
+
+# === Secrets — NEVER push these ===
 src/main/resources/application-local.properties
+src/main/resources/secrets.properties
+
+# === Uploaded files ===
+src/main/resources/static/uploads/
+
+# === OS files ===
+.DS_Store
+Thumbs.db
+
+# === Logs ===
+*.log
+logs/
+
+# === Packaged files ===
+*.jar
+*.war
+!.mvn/wrapper/maven-wrapper.jar
+
+# === Temp / backup ===
+*.swp
+*.bak
+*.tmp
