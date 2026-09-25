@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - LearnHub</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navbar -->
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <div style="max-width: 1000px; margin: 0 auto; padding: 2rem; height: 100vh">
+
+        <h1 style="margin-bottom: 1.5rem;">&#9881; Admin Dashboard</h1>
+
+        <!-- Stats Overview Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" th:text="${categoryCount}">0</div>
+                <div class="stat-label">Categories</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" th:text="${topicCount}">0</div>
+                <div class="stat-label">Topics</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" th:text="${articleCount}">0</div>
+                <div class="stat-label">Articles</div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <h2 style="margin-bottom: 1rem; font-size: 1.1rem;">Quick Actions</h2>
+
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <a th:href="@{/admin/categories}" class="card card-clickable"
+               style="text-decoration: none; color: inherit; flex: 1; min-width: 200px;">
+                <h2>&#128193; Manage Categories</h2>
+                <p>Create, edit, or delete learning categories.</p>
+            </a>
+
+            <a th:href="@{/admin/topics}" class="card card-clickable"
+               style="text-decoration: none; color: inherit; flex: 1; min-width: 200px;">
+                <h2>&#128209; Manage Topics</h2>
+                <p>Organize topics within categories.</p>
+            </a>
+
+            <a th:href="@{/admin/articles}" class="card card-clickable"
+               style="text-decoration: none; color: inherit; flex: 1; min-width: 200px;">
+                <h2>&#128221; Manage Articles</h2>
+                <p>Write and edit learning content.</p>
+            </a>
+
+            <a th:href="@{/admin/roadmaps}" class="card card-clickable"
+               style="text-decoration: none; color: inherit; flex: 1; min-width: 200px;">
+                <h2>&#128506; Manage Roadmaps</h2>
+                <p>Create and publish exam study roadmaps.</p>
+            </a>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

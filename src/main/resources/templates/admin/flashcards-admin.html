@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Flashcards — ' + ${topic.title} + ' — Admin'">Flashcards Admin</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
+    <style>
+        .fa-page { max-width: 820px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
+
+        .fa-back {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            font-size: 0.82rem; color: #6a6a8a; text-decoration: none;
+            margin-bottom: 1.5rem; transition: color 0.2s;
+        }
+        .fa-back:hover { color: #a78bfa; }
+
+        .fa-header { margin-bottom: 2rem; }
+        .fa-header h1 { font-size: 1.5rem; font-weight: 700; color: #eeeef8; margin: 0 0 0.2rem; }
+        .fa-header p  { font-size: 0.85rem; color: #5a5a7a; }
+
+        /* Add form */
+        .fa-form-card {
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 16px; padding: 1.75rem; margin-bottom: 2.5rem;
+        }
+        .fa-form-title {
+            font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; font-weight: 700;
+            letter-spacing: 0.15em; text-transform: uppercase; color: #7c6cf0;
+            margin-bottom: 1.25rem;
+        }
+        .fa-field { margin-bottom: 1rem; }
+        .fa-label {
+            display: block; font-size: 0.8rem; font-weight: 600; color: #7a7a9a;
+            margin-bottom: 0.35rem; letter-spacing: 0.03em;
+        }
+        .fa-textarea {
+            width: 100%; padding: 0.65rem 0.9rem; border-radius: 9px;
+            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
+            color: #e0e0f0; font-size: 0.9rem; font-family: 'DM Sans', sans-serif;
+            outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+            box-sizing: border-box; resize: vertical; min-height: 80px;
+        }
+        .fa-textarea:focus {
+            border-color: rgba(124,108,240,0.45);
+            box-shadow: 0 0 0 3px rgba(124,108,240,0.1);
+        }
+        .fa-textarea::placeholder { color: #404060; }
+
+        .fa-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        @media (max-width: 600px) { .fa-form-row { grid-template-columns: 1fr; } }
+
+        .fa-submit-btn {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.65rem 1.75rem; border-radius: 10px; border: none; cursor: pointer;
+            font-size: 0.9rem; font-weight: 700; font-family: 'DM Sans', sans-serif;
+            background: linear-gradient(135deg, #7c6cf0, #2dd4bf); color: #fff;
+            box-shadow: 0 4px 16px rgba(124,108,240,0.35);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .fa-submit-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(124,108,240,0.5); }
+
+        /* Cards list */
+        .fa-section-heading {
+            font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; font-weight: 700;
+            letter-spacing: 0.15em; text-transform: uppercase; color: #4a4a65;
+            margin-bottom: 0.9rem; padding-bottom: 0.55rem;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .fa-count-pill {
+            font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+            background: rgba(124,108,240,0.1); border: 1px solid rgba(124,108,240,0.18);
+            color: #a78bfa; border-radius: 20px; padding: 0.1rem 0.6rem;
+        }
+
+        .fa-list { display: flex; flex-direction: column; gap: 0.75rem; }
+        .fa-item {
+            background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 13px; padding: 1rem 1.25rem;
+            display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; align-items: center;
+        }
+        @media (max-width: 600px) { .fa-item { grid-template-columns: 1fr; } }
+
+        .fa-item-side { }
+        .fa-side-label {
+            font-family: 'JetBrains Mono', monospace; font-size: 0.55rem; font-weight: 700;
+            letter-spacing: 0.12em; text-transform: uppercase; color: #35355a;
+            margin-bottom: 0.25rem;
+        }
+        .fa-side-text { font-size: 0.9rem; color: #c8c8e0; line-height: 1.4; }
+        .fa-item-divider {
+            width: 1px; height: 100%; background: rgba(255,255,255,0.06);
+            align-self: stretch;
+        }
+
+        .fa-delete-btn {
+            padding: 0.4rem 0.8rem; border-radius: 8px;
+            background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.2);
+            color: #f87171; font-size: 0.8rem; font-weight: 600;
+            font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.18s;
+            white-space: nowrap;
+        }
+        .fa-delete-btn:hover { background: rgba(248,113,113,0.15); }
+
+        .fa-flash {
+            padding: 0.8rem 1.1rem; border-radius: 10px; margin-bottom: 1.5rem;
+            font-size: 0.88rem; font-weight: 600;
+        }
+        .fa-flash-ok  { background: rgba(45,212,191,0.1); border: 1px solid rgba(45,212,191,0.25); color: #2dd4bf; }
+        .fa-flash-err { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25); color: #f87171; }
+
+        .fa-num-badge {
+            font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: #4a4a65;
+            flex-shrink: 0;
+        }
+
+        html:not([data-theme="dark"]) .fa-header h1 { color: #1a1a2e; }
+        html:not([data-theme="dark"]) .fa-form-card { background: #fff; border-color: #e2e8f0; }
+        html:not([data-theme="dark"]) .fa-textarea   { background: #f8f9fb; border-color: #e2e8f0; color: #1a1a2e; }
+        html:not([data-theme="dark"]) .fa-item        { background: #fff; border-color: #e2e8f0; }
+        html:not([data-theme="dark"]) .fa-side-text   { color: #334155; }
+    </style>
+</head>
+<body>
+
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="fa-page">
+
+    <a th:href="@{/admin/topics}" class="fa-back">← Back to Topics</a>
+
+    <div class="fa-header">
+        <h1>🃏 Flashcards</h1>
+        <p th:text="'Managing flashcards for: ' + ${topic.title}">Topic</p>
+    </div>
+
+    <!-- Flash messages -->
+    <div th:if="${success}" class="fa-flash fa-flash-ok" th:text="${success}"></div>
+    <div th:if="${error}"   class="fa-flash fa-flash-err" th:text="${error}"></div>
+
+    <!-- ── Add flashcard form ──────────────────────────────────── -->
+    <div class="fa-form-card">
+        <div class="fa-form-title">✦ Add New Flashcard</div>
+        <form th:action="@{/admin/topics/{topicId}/flashcards/create(topicId=${topic.id})}"
+              method="post">
+            <div class="fa-form-row">
+                <div class="fa-field">
+                    <label class="fa-label">Front — Term / Question</label>
+                    <textarea class="fa-textarea" name="front"
+                              placeholder="e.g. What is the Waterfall model?"
+                              required></textarea>
+                </div>
+                <div class="fa-field">
+                    <label class="fa-label">Back — Definition / Answer</label>
+                    <textarea class="fa-textarea" name="back"
+                              placeholder="e.g. A sequential software development process…"
+                              required></textarea>
+                </div>
+            </div>
+            <button type="submit" class="fa-submit-btn">＋ Add Flashcard</button>
+        </form>
+    </div>
+
+    <!-- ── Existing flashcards ─────────────────────────────────── -->
+    <div class="fa-section-heading">
+        <span>Existing Flashcards</span>
+        <span class="fa-count-pill" th:text="${#lists.size(cards)} + ' cards'">0 cards</span>
+    </div>
+
+    <div th:if="${#lists.isEmpty(cards)}"
+         style="text-align:center;padding:2.5rem;color:#4a4a65;font-size:0.88rem;">
+        No flashcards yet — add one above.
+    </div>
+
+    <div class="fa-list">
+        <div th:each="card, iter : ${cards}" class="fa-item">
+
+            <!-- Front side -->
+            <div class="fa-item-side">
+                <div class="fa-side-label">Front</div>
+                <div class="fa-side-text" th:text="${card.front}">Term</div>
+            </div>
+
+            <!-- Back side -->
+            <div class="fa-item-side">
+                <div class="fa-side-label">Back</div>
+                <div class="fa-side-text" th:text="${card.back}">Definition</div>
+            </div>
+
+            <!-- Delete -->
+            <form th:action="@{/admin/topics/{tid}/flashcards/delete/{cid}(tid=${topic.id},cid=${card.id})}"
+                  method="post">
+                <button type="submit" class="fa-delete-btn"
+                        onclick="return confirm('Delete this flashcard?')">Delete</button>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

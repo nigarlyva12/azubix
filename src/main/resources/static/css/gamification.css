@@ -1,0 +1,424 @@
+/* ============================================================
+   CODEWERK — Gamification: XP, Achievements, Leaderboard
+   ============================================================ */
+
+/* ── Shared XP number colour ───────────────────────────────── */
+.xp-num {
+    color: var(--primary);
+}
+
+.dash-stat-xp .dash-stat-num {
+    color: var(--primary);
+}
+
+/* ── Achievement count badge (in dashboard card title) ─────── */
+.ach-count-badge {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--primary);
+    background: var(--primary-light);
+    border-radius: 20px;
+    padding: 0.15rem 0.6rem;
+}
+
+/* ── Achievement grid ──────────────────────────────────────── */
+.ach-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+    gap: 0.85rem;
+    margin-top: 1rem;
+}
+
+.ach-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 1rem 0.5rem 0.75rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    cursor: default;
+    transition: transform 0.2s, box-shadow 0.2s;
+    gap: 0.3rem;
+}
+
+/* Unlocked */
+.ach-badge.ach-unlocked {
+    background: linear-gradient(135deg, #f5f3ff, #f0fdf9);
+    border-color: rgba(124, 108, 240, 0.25);
+    box-shadow: 0 2px 8px rgba(124, 108, 240, 0.08);
+}
+
+.ach-badge.ach-unlocked:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(124, 108, 240, 0.14);
+}
+
+/* Locked — greyed out */
+.ach-badge.ach-locked {
+    background: var(--light-gray);
+    opacity: 0.45;
+    filter: grayscale(80%);
+}
+
+.ach-icon {
+    font-size: 1.75rem;
+    line-height: 1;
+}
+
+.ach-name {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--dark);
+    line-height: 1.2;
+}
+
+.ach-xp {
+    font-size: 0.65rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.ach-locked .ach-xp { color: var(--gray); }
+
+.ach-empty {
+    text-align: center;
+    color: var(--gray);
+    font-size: 0.85rem;
+    padding: 1.5rem;
+}
+
+/* ============================================================
+   LEADERBOARD PAGE
+   ============================================================ */
+
+.lb-page {
+    min-height: 100vh;
+    background: var(--nav-surface);
+}
+
+/* ── Banner ─────────────────────────────────────────────────── */
+.lb-banner {
+    background: var(--nav-bg);
+    padding: 3rem 2rem 2.5rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.lb-banner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(124, 108, 240, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(124, 108, 240, 0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+}
+
+.lb-banner-inner {
+    position: relative;
+    z-index: 1;
+}
+
+.lb-banner-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.lb-banner h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 0.4rem;
+}
+
+.lb-banner p {
+    color: var(--nav-text);
+    font-size: 0.95rem;
+}
+
+/* ── Podium ─────────────────────────────────────────────────── */
+.lb-podium {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 2.5rem 1.5rem 0;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.lb-podium-spot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    flex: 1;
+}
+
+.lb-pod-crown {
+    font-size: 1.5rem;
+    margin-bottom: 0.15rem;
+    animation: crownBob 2.5s ease-in-out infinite;
+}
+
+@keyframes crownBob {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-5px); }
+}
+
+.lb-pod-avatar {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: #fff;
+    font-size: 1.3rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 14px rgba(124, 108, 240, 0.3);
+}
+
+.lb-pod-avatar-1 {
+    width: 68px;
+    height: 68px;
+    font-size: 1.6rem;
+    box-shadow: 0 6px 20px rgba(124, 108, 240, 0.4);
+}
+
+.lb-you .lb-pod-avatar,
+.lb-you .lb-pod-avatar-1 {
+    outline: 3px solid var(--accent);
+    outline-offset: 3px;
+}
+
+.lb-pod-name {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--dark);
+    text-align: center;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lb-pod-xp {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.lb-pod-medal {
+    font-size: 1.1rem;
+}
+
+/* Podium bases */
+.lb-pod-base {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px 8px 0 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: rgba(255,255,255,0.7);
+}
+
+.lb-base-1 {
+    background: linear-gradient(135deg, #f5c518, #e8a000);
+    height: 80px;
+    box-shadow: 0 -4px 16px rgba(245, 197, 24, 0.3);
+}
+
+.lb-base-2 {
+    background: linear-gradient(135deg, #b8c4cc, #8fa0ab);
+    height: 60px;
+}
+
+.lb-base-3 {
+    background: linear-gradient(135deg, #cd7f32, #a0522d);
+    height: 44px;
+}
+
+/* ── Ranked list ─────────────────────────────────────────────── */
+.lb-list-section {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 1.5rem 1.5rem 4rem;
+}
+
+.lb-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.lb-row {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.85rem 1.1rem;
+    box-shadow: var(--shadow);
+    transition: border-color 0.2s, transform 0.2s;
+}
+
+.lb-row:hover {
+    border-color: rgba(124, 108, 240, 0.2);
+    transform: translateX(3px);
+}
+
+/* Highlighted "You" row */
+.lb-row-you {
+    border-color: var(--primary) !important;
+    background: linear-gradient(135deg, #f8f7ff, #f0fdf9);
+}
+
+.lb-row-rank {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--gray);
+    min-width: 28px;
+    text-align: right;
+}
+
+.lb-row-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-light), #ccfbf1);
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.lb-row-you .lb-row-avatar {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: #fff;
+}
+
+.lb-row-name {
+    flex: 1;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.lb-you-tag {
+    font-size: 0.65rem;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+    background: rgba(45, 212, 191, 0.12);
+    border: 1px solid rgba(45, 212, 191, 0.3);
+    border-radius: 10px;
+    padding: 0.1rem 0.45rem;
+}
+
+.lb-row-badges {
+    font-size: 0.78rem;
+    color: var(--gray);
+    white-space: nowrap;
+    min-width: 48px;
+    text-align: center;
+}
+
+.lb-row-xp-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 160px;
+}
+
+.lb-row-xp-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--light-gray);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.lb-row-xp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    border-radius: 3px;
+    transition: width 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.lb-row-xp-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--primary);
+    white-space: nowrap;
+}
+
+/* Join prompt + empty */
+.lb-signup-prompt {
+    text-align: center;
+    padding: 1.25rem;
+    font-size: 0.88rem;
+}
+
+.lb-signup-prompt a {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.lb-empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--gray);
+}
+
+.lb-empty-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.lb-empty p { font-size: 0.9rem; margin-bottom: 1rem; }
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 600px) {
+    .lb-row-xp-wrap { min-width: 0; }
+    .lb-row-xp-bar  { display: none; }
+    .ach-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
+    .lb-podium { padding-top: 1.5rem; }
+}
+
+/* ── Dark theme overrides ───────────────────────────────────── */
+html[data-theme="dark"] .ach-badge.ach-unlocked {
+    background: linear-gradient(135deg, rgba(124,108,240,0.12), rgba(45,212,191,0.08));
+    border-color: rgba(124,108,240,0.25);
+    box-shadow: 0 2px 8px rgba(124,108,240,0.12);
+}
+
+html[data-theme="dark"] .ach-badge.ach-locked {
+    background: rgba(255,255,255,0.03);
+    border-color: rgba(255,255,255,0.07);
+}
+
+html[data-theme="dark"] .ach-count-badge {
+    background: rgba(124,108,240,0.12);
+    color: #a78bfa;
+}

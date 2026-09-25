@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${editMode} ? 'Edit Article' : 'Create Article'">Article Form</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+
+    <style>
+        /* ── Lang tabs ─────────────────────────────────────────── */
+        .lang-tabs { display:flex; gap:0; border-bottom:2px solid var(--border); margin-bottom:1.5rem; }
+        .lang-tab {
+            padding:.6rem 1.4rem; font-size:.88rem; font-weight:600;
+            font-family:'JetBrains Mono',monospace; color:var(--gray); cursor:pointer;
+            border:1px solid transparent; border-bottom:none; border-radius:8px 8px 0 0;
+            background:none; transition:color .15s,background .15s;
+            display:flex; align-items:center; gap:.4rem;
+        }
+        .lang-tab:hover { color:var(--dark); background:var(--light-gray); }
+        .lang-tab.active { color:var(--primary); background:#fff; border-color:var(--border); margin-bottom:-2px; }
+        .lang-tab .lang-flag { font-size:1rem; }
+        .lang-tab .lang-badge { font-size:.62rem; padding:.1rem .4rem; border-radius:8px; background:var(--primary-light); color:var(--primary); }
+        .lang-tab .lang-badge.optional { background:#f0fdf4; color:#16a34a; }
+        .lang-panel { display:none; }
+        .lang-panel.active { display:block; }
+
+        /* ── Editor wrap ────────────────────────────────────────── */
+        .editor-wrap { border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+        .ql-toolbar.ql-snow { background:var(--light-gray); border:none; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+        .ql-container.ql-snow { border:none; }
+        .ql-editor { min-height:380px; font-size:.95rem; font-family:'DM Sans',sans-serif; }
+        .ql-snow .ql-editor pre.ql-syntax { background:#1e293b; color:#e2e8f0; border-radius:6px; padding:1rem; font-family:'JetBrains Mono',monospace; }
+        .ql-editor img { cursor:pointer; max-width:100%; }
+        .ql-editor table { border-collapse:collapse; width:100%; margin:1rem 0; }
+        .ql-editor table td, .ql-editor table th { border:1px solid #d1d5db; padding:.5rem .75rem; min-width:80px; vertical-align:top; }
+        .ql-editor table th { background:#f8fafc; font-weight:600; }
+
+        /* ── Word count bar ─────────────────────────────────────── */
+        .editor-meta { display:flex; align-items:center; justify-content:flex-end; padding:.35rem .9rem; background:var(--light-gray); border-top:1px solid var(--border); font-size:.72rem; color:var(--gray); }
+
+        /* ── Fullscreen ─────────────────────────────────────────── */
+        .editor-wrap.fullscreen { position:fixed; inset:0; z-index:9999; border-radius:0; border:none; display:flex; flex-direction:column; background:#fff; }
+        .editor-wrap.fullscreen .ql-toolbar.ql-snow { flex-shrink:0; }
+        .editor-wrap.fullscreen .ql-container { flex:1; overflow-y:auto; }
+        .editor-wrap.fullscreen .ql-editor { min-height:100%; max-width:820px; margin:0 auto; padding:2.5rem 2rem; }
+        .editor-wrap.fullscreen .editor-meta { flex-shrink:0; }
+
+        /* ── Custom toolbar button icons ────────────────────────── */
+        .ql-toolbar button.ql-table, .ql-toolbar button.ql-fullscreen, .ql-toolbar button.ql-code-insert {
+            display:inline-flex; align-items:center; justify-content:center; width:28px; height:24px; padding:0;
+        }
+        .ql-toolbar button svg { width:16px; height:16px; }
+
+        /* ── Image resize overlay ───────────────────────────────── */
+        #img-resize-overlay {
+            display:none; position:fixed; z-index:8000;
+            outline:2px solid var(--primary,#7c6cf0); outline-offset:1px;
+            pointer-events:none;
+        }
+        .irh {
+            position:absolute; width:10px; height:10px;
+            background:#fff; border:2px solid var(--primary,#7c6cf0); border-radius:2px;
+            pointer-events:all; transform:translate(-50%,-50%);
+        }
+        .irh.nw { top:0;    left:0;    cursor:nw-resize; }
+        .irh.n  { top:0;    left:50%;  cursor:n-resize;  }
+        .irh.ne { top:0;    left:100%; cursor:ne-resize; }
+        .irh.e  { top:50%;  left:100%; cursor:e-resize;  }
+        .irh.se { top:100%; left:100%; cursor:se-resize; }
+        .irh.s  { top:100%; left:50%;  cursor:s-resize;  }
+        .irh.sw { top:100%; left:0;    cursor:sw-resize; }
+        .irh.w  { top:50%;  left:0;    cursor:w-resize;  }
+        .ir-badge {
+            position:absolute; bottom:-22px; left:0;
+            background:rgba(0,0,0,.65); color:#fff; font-size:.7rem;
+            padding:2px 6px; border-radius:4px; pointer-events:none; white-space:nowrap;
+        }
+        .ir-bar {
+            position:absolute; top:-36px; left:0;
+            display:flex; gap:2px; background:#fff;
+            border:1px solid var(--border,#e2e8f0); border-radius:6px;
+            padding:3px 4px; box-shadow:0 2px 8px rgba(0,0,0,.12);
+            pointer-events:all; white-space:nowrap;
+        }
+        .ir-bar button {
+            border:none; background:none; cursor:pointer;
+            padding:2px 8px; border-radius:4px; font-size:.72rem; font-weight:500; color:var(--dark,#1e293b);
+        }
+        .ir-bar button:hover { background:var(--light-gray,#f1f5f9); }
+
+        /* ── Table context toolbar ──────────────────────────────── */
+        #table-ctx-bar {
+            display:none; position:fixed; z-index:7500;
+            align-items:center; gap:4px;
+            background:#fff; border:1px solid var(--border,#e2e8f0);
+            border-radius:8px; padding:4px 7px;
+            box-shadow:0 4px 16px rgba(0,0,0,.12); font-size:.75rem;
+        }
+        .ttb-grp { display:flex; align-items:center; gap:2px; }
+        .ttb-grp button {
+            border:none; background:none; cursor:pointer;
+            padding:3px 7px; border-radius:4px; font-size:.78rem; font-weight:500; color:var(--dark,#1e293b); white-space:nowrap;
+        }
+        .ttb-grp button:hover { background:var(--light-gray,#f1f5f9); }
+        .ttb-grp button.danger:hover { background:#fee2e2; color:#dc2626; }
+        .ttb-sep { width:1px; height:16px; background:var(--border,#e2e8f0); margin:0 2px; }
+        .ttb-swatch {
+            width:16px; height:16px; border-radius:3px; cursor:pointer;
+            border:1px solid #d1d5db; display:inline-block;
+        }
+        .ttb-swatch:hover { transform:scale(1.2); }
+        .ttb-label { font-size:.7rem; color:var(--gray); }
+
+        /* ── Modal overlays (shared) ────────────────────────────── */
+        .modal-overlay {
+            display:none; position:fixed; inset:0;
+            background:rgba(0,0,0,.45); z-index:10000;
+            align-items:center; justify-content:center;
+        }
+        .modal-overlay.open { display:flex; }
+        .modal-box { background:#fff; border-radius:12px; padding:1.75rem 2rem; box-shadow:0 20px 60px rgba(0,0,0,.2); }
+        .modal-box h3 { margin:0 0 1.25rem; font-size:1rem; font-weight:700; }
+        .modal-actions { display:flex; gap:.5rem; justify-content:flex-end; margin-top:1rem; }
+
+        /* ── Table size picker modal ────────────────────────────── */
+        #table-modal .modal-box { width:310px; }
+        .grid-label { font-size:.8rem; color:var(--gray); margin-bottom:.6rem; height:1.2em; }
+        .grid-picker { display:grid; grid-template-columns:repeat(8,1fr); gap:3px; margin-bottom:.5rem; }
+        .grid-cell { aspect-ratio:1; border:1px solid #e2e8f0; border-radius:2px; cursor:pointer; background:#f8fafc; transition:background .1s,border-color .1s; }
+        .grid-cell.hover { background:var(--primary-light,#ede9fe); border-color:var(--primary,#7c6cf0); }
+
+        /* ── Code insert modal ──────────────────────────────────── */
+        #code-modal .modal-box { width:560px; }
+        #code-modal select.form-control { margin-top:.3rem; }
+        #code-input {
+            width:100%; box-sizing:border-box;
+            min-height:220px; margin-top:.3rem;
+            font-family:'JetBrains Mono',monospace; font-size:.85rem;
+            padding:.75rem; border:1px solid var(--border); border-radius:var(--radius);
+            resize:vertical; background:#1e293b; color:#e2e8f0; line-height:1.6;
+        }
+        #code-input:focus { outline:none; border-color:var(--primary); }
+
+        /* ── DE status ──────────────────────────────────────────── */
+        .de-status { display:flex; align-items:center; gap:.5rem; font-size:.8rem; color:var(--gray); margin-bottom:1rem; padding:.6rem .9rem; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:var(--radius); }
+        .de-status-dot { width:8px; height:8px; border-radius:50%; background:#16a34a; flex-shrink:0; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<!-- ── Table size picker modal ──────────────────────────────────────── -->
+<div class="modal-overlay" id="table-modal">
+    <div class="modal-box">
+        <h3>Insert Table</h3>
+        <div class="grid-label" id="grid-label">Hover to select size</div>
+        <div class="grid-picker" id="grid-picker"></div>
+        <div class="modal-actions">
+            <button type="button" class="btn btn-outline" style="font-size:.85rem;padding:.4rem 1rem" onclick="document.getElementById('table-modal').classList.remove('open')">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Code insert modal ────────────────────────────────────────────── -->
+<div class="modal-overlay" id="code-modal">
+    <div class="modal-box">
+        <h3>Insert Code Block</h3>
+        <div class="form-group" style="margin-bottom:.9rem">
+            <label style="font-size:.85rem;font-weight:600">Language</label>
+            <select id="code-lang" class="form-control">
+                <option value="plaintext">Plain Text</option>
+                <option value="javascript" selected>JavaScript</option>
+                <option value="typescript">TypeScript</option>
+                <option value="python">Python</option>
+                <option value="java">Java</option>
+                <option value="kotlin">Kotlin</option>
+                <option value="html">HTML</option>
+                <option value="css">CSS</option>
+                <option value="sql">SQL</option>
+                <option value="bash">Bash / Shell</option>
+                <option value="json">JSON</option>
+                <option value="xml">XML</option>
+                <option value="cpp">C++</option>
+                <option value="csharp">C#</option>
+                <option value="php">PHP</option>
+                <option value="go">Go</option>
+                <option value="rust">Rust</option>
+                <option value="swift">Swift</option>
+                <option value="ruby">Ruby</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label style="font-size:.85rem;font-weight:600">Code</label>
+            <textarea id="code-input" spellcheck="false" placeholder="Paste or type your code here…"></textarea>
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn btn-outline" style="font-size:.85rem;padding:.4rem 1rem" onclick="closeCodeModal()">Cancel</button>
+            <button type="button" class="btn btn-primary" style="font-size:.85rem;padding:.4rem 1rem" onclick="doInsertCode()">Insert</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Table context toolbar ─────────────────────────────────────────── -->
+<div id="table-ctx-bar">
+    <div class="ttb-grp">
+        <button type="button" data-ta="row-above" title="Insert row above">↑ Row</button>
+        <button type="button" data-ta="row-below" title="Insert row below">↓ Row</button>
+        <button type="button" data-ta="del-row"   title="Delete row" class="danger">✕ Row</button>
+    </div>
+    <div class="ttb-sep"></div>
+    <div class="ttb-grp">
+        <button type="button" data-ta="col-left"  title="Insert column left">← Col</button>
+        <button type="button" data-ta="col-right" title="Insert column right">Col →</button>
+        <button type="button" data-ta="del-col"   title="Delete column" class="danger">✕ Col</button>
+    </div>
+    <div class="ttb-sep"></div>
+    <div class="ttb-grp">
+        <span class="ttb-label">Cell&nbsp;bg:</span>
+        <span class="ttb-swatch" data-ta="cell-bg" data-color=""       title="No fill"  style="background:#fff;font-size:.6rem;display:inline-flex;align-items:center;justify-content:center;">✕</span>
+        <span class="ttb-swatch" data-ta="cell-bg" data-color="#fef9c3" title="Yellow"  style="background:#fef9c3"></span>
+        <span class="ttb-swatch" data-ta="cell-bg" data-color="#dcfce7" title="Green"   style="background:#dcfce7"></span>
+        <span class="ttb-swatch" data-ta="cell-bg" data-color="#dbeafe" title="Blue"    style="background:#dbeafe"></span>
+        <span class="ttb-swatch" data-ta="cell-bg" data-color="#fce7f3" title="Pink"    style="background:#fce7f3"></span>
+        <span class="ttb-swatch" data-ta="cell-bg" data-color="#f3e8ff" title="Purple"  style="background:#f3e8ff"></span>
+        <span class="ttb-swatch" data-ta="cell-bg" data-color="#f1f5f9" title="Gray"    style="background:#f1f5f9"></span>
+    </div>
+    <div class="ttb-sep"></div>
+    <div class="ttb-grp">
+        <button type="button" data-ta="del-table" title="Delete entire table" class="danger">⊗ Table</button>
+    </div>
+</div>
+
+<div style="max-width:960px;margin:0 auto;padding:2rem">
+    <div class="breadcrumb">
+        <a th:href="@{/admin}">Dashboard</a><span class="separator">/</span>
+        <a th:href="@{/admin/articles}">Articles</a><span class="separator">/</span>
+        <span th:text="${editMode} ? 'Edit' : 'Create'">Create</span>
+    </div>
+
+    <h1 th:text="${editMode} ? 'Edit Article' : 'Create New Article'" style="margin-bottom:.35rem">Create New Article</h1>
+    <p style="color:var(--gray);font-size:.88rem;margin-bottom:1.75rem">
+        English content is required. German content is optional — if left blank, German visitors will see the English version.
+    </p>
+
+    <form id="article-form"
+          th:action="${editMode} ? @{/admin/articles/update/{id}(id=${articleDto.id})} : @{/admin/articles/create}"
+          method="post" th:object="${articleDto}" onsubmit="return syncAllContent()">
+
+        <div th:if="${#fields.hasErrors('*')}" class="alert alert-error">Please fix the errors below.</div>
+        <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+        <div class="form-group">
+            <label for="topicId">Topic *</label>
+            <select id="topicId" th:field="*{topicId}" class="form-control">
+                <option value="">-- Select a Topic --</option>
+                <option th:each="topic : ${topics}" th:value="${topic.id}"
+                        th:text="${topic.category.name + ' → ' + topic.title}">Topic</option>
+            </select>
+            <p th:if="${#fields.hasErrors('topicId')}" th:errors="*{topicId}" class="form-error">Topic error</p>
+        </div>
+
+        <div class="lang-tabs">
+            <button type="button" class="lang-tab active" onclick="switchTab('en')">
+                <span class="lang-flag">🇬🇧</span> English <span class="lang-badge">Required</span>
+            </button>
+            <button type="button" class="lang-tab" onclick="switchTab('de')">
+                <span class="lang-flag">🇩🇪</span> Deutsch <span class="lang-badge optional">Optional</span>
+            </button>
+        </div>
+
+        <!-- ENGLISH -->
+        <div id="panel-en" class="lang-panel active">
+            <div class="form-group">
+                <label for="title">Title (English) *</label>
+                <input type="text" id="title" th:field="*{title}" class="form-control" placeholder="e.g., Introduction to Variables">
+                <p th:if="${#fields.hasErrors('title')}" th:errors="*{title}" class="form-error">Title error</p>
+            </div>
+            <div class="form-group">
+                <label>Content (English) *</label>
+                <div class="editor-wrap" id="editor-en-wrap">
+                    <div id="editor-en"></div>
+                    <div class="editor-meta"><span id="wc-en">0 words · 0 characters</span></div>
+                </div>
+                <input type="hidden" id="content" name="content"
+                       th:value="${articleDto.content != null ? articleDto.content : ''}">
+            </div>
+        </div>
+
+        <!-- GERMAN -->
+        <div id="panel-de" class="lang-panel">
+            <div class="de-status"><div class="de-status-dot"></div>If left blank, German users will see the English content automatically.</div>
+            <div class="form-group">
+                <label for="titleDe">Titel (Deutsch)</label>
+                <input type="text" id="titleDe" th:field="*{titleDe}" class="form-control" placeholder="z.B. Einführung in Variablen">
+            </div>
+            <div class="form-group">
+                <label>Inhalt (Deutsch)</label>
+                <div class="editor-wrap" id="editor-de-wrap">
+                    <div id="editor-de"></div>
+                    <div class="editor-meta"><span id="wc-de">0 words · 0 characters</span></div>
+                </div>
+                <input type="hidden" id="contentDe" name="contentDe"
+                       th:value="${articleDto.contentDe != null ? articleDto.contentDe : ''}">
+            </div>
+        </div>
+
+        <div style="display:flex;gap:.5rem;margin-top:1.5rem">
+            <button type="submit" class="btn btn-primary"
+                    th:text="${editMode} ? 'Update Article' : 'Publish Article'">Publish Article</button>
+            <a th:href="@{/admin/articles}" class="btn btn-outline">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+
+<script th:inline="none">
+// ══════════════════════════════════════════════════════════════════════
+// TOOLBAR
+// ══════════════════════════════════════════════════════════════════════
+var toolbarOptions = [
+    [{ header: [1, 2, 3, false] }],
+    [{ size: ['small', false, 'large', 'huge'] }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ script: 'sub' }, { script: 'super' }],
+    [{ color: [] }, { background: [] }],
+    [{ list: 'ordered' }, { list: 'bullet' }],
+    [{ indent: '-1' }, { indent: '+1' }],
+    [{ align: [] }],
+    ['blockquote', 'code-block'],
+    ['link', 'image'],
+    ['clean']
+];
+
+// ══════════════════════════════════════════════════════════════════════
+// QUILL INSTANCES
+// ══════════════════════════════════════════════════════════════════════
+var quillEn = new Quill('#editor-en', { theme: 'snow', modules: { syntax: true, toolbar: toolbarOptions }, placeholder: 'Write the English article content here…' });
+var quillDe = new Quill('#editor-de', { theme: 'snow', modules: { syntax: true, toolbar: toolbarOptions }, placeholder: 'Schreibe den deutschen Artikelinhalt hier…' });
+
+var existingEn = document.getElementById('content').value;
+if (existingEn && existingEn.trim() && existingEn !== '<p><br></p>') quillEn.root.innerHTML = existingEn;
+
+var existingDe = document.getElementById('contentDe').value;
+if (existingDe && existingDe.trim() && existingDe !== '<p><br></p>') quillDe.root.innerHTML = existingDe;
+
+// ══════════════════════════════════════════════════════════════════════
+// CUSTOM TOOLBAR BUTTONS  (Table · Fullscreen · Code)
+// ══════════════════════════════════════════════════════════════════════
+function addCustomButtons(quill, wrapperId) {
+    var toolbar = quill.getModule('toolbar');
+    var group   = document.createElement('span');
+    group.className = 'ql-formats';
+
+    // ── Table
+    var tBtn = document.createElement('button');
+    tBtn.type = 'button'; tBtn.title = 'Insert Table'; tBtn.className = 'ql-table';
+    tBtn.innerHTML = '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="2" width="14" height="14" rx="1.5"/><line x1="2" y1="7" x2="16" y2="7"/><line x1="2" y1="12" x2="16" y2="12"/><line x1="7" y1="2" x2="7" y2="16"/><line x1="12" y1="2" x2="12" y2="16"/></svg>';
+    tBtn.addEventListener('click', function () { openTableModal(quill); });
+    group.appendChild(tBtn);
+
+    // ── Fullscreen
+    var fBtn = document.createElement('button');
+    fBtn.type = 'button'; fBtn.title = 'Fullscreen'; fBtn.className = 'ql-fullscreen';
+    fBtn.innerHTML = '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><polyline points="1,5 1,1 5,1"/><polyline points="13,1 17,1 17,5"/><polyline points="17,13 17,17 13,17"/><polyline points="5,17 1,17 1,13"/></svg>';
+    fBtn.addEventListener('click', function () { toggleFullscreen(wrapperId, fBtn); });
+    group.appendChild(fBtn);
+
+    toolbar.container.appendChild(group);
+
+    // ── Intercept code-block button → open modal
+    toolbar.addHandler('code-block', function () { openCodeModal(quill); });
+}
+
+addCustomButtons(quillEn, 'editor-en-wrap');
+addCustomButtons(quillDe, 'editor-de-wrap');
+
+// ══════════════════════════════════════════════════════════════════════
+// TABLE SIZE PICKER MODAL
+// ══════════════════════════════════════════════════════════════════════
+var _tableQuill = null;
+
+(function buildGrid() {
+    var picker = document.getElementById('grid-picker');
+    for (var r = 1; r <= 6; r++) {
+        for (var c = 1; c <= 8; c++) {
+            var cell = document.createElement('div');
+            cell.className = 'grid-cell';
+            cell.dataset.r = r; cell.dataset.c = c;
+            picker.appendChild(cell);
+        }
+    }
+    picker.addEventListener('mouseover', function (e) {
+        var cell = e.target.closest('.grid-cell');
+        if (!cell) return;
+        var hr = +cell.dataset.r, hc = +cell.dataset.c;
+        document.getElementById('grid-label').textContent = hr + ' × ' + hc + ' table';
+        picker.querySelectorAll('.grid-cell').forEach(function (c) {
+            c.classList.toggle('hover', +c.dataset.r <= hr && +c.dataset.c <= hc);
+        });
+    });
+    picker.addEventListener('mouseleave', function () {
+        picker.querySelectorAll('.grid-cell').forEach(function (c) { c.classList.remove('hover'); });
+        document.getElementById('grid-label').textContent = 'Hover to select size';
+    });
+    picker.addEventListener('click', function (e) {
+        var cell = e.target.closest('.grid-cell');
+        if (!cell) return;
+        doInsertTable(_tableQuill, +cell.dataset.r, +cell.dataset.c);
+        document.getElementById('table-modal').classList.remove('open');
+    });
+    document.getElementById('table-modal').addEventListener('click', function (e) {
+        if (e.target === this) this.classList.remove('open');
+    });
+})();
+
+function openTableModal(quill) {
+    _tableQuill = quill;
+    document.getElementById('grid-label').textContent = 'Hover to select size';
+    document.getElementById('grid-picker').querySelectorAll('.grid-cell').forEach(function (c) { c.classList.remove('hover'); });
+    document.getElementById('table-modal').classList.add('open');
+}
+
+function doInsertTable(quill, rows, cols) {
+    var html = '<table><tbody>';
+    for (var r = 0; r < rows; r++) {
+        html += '<tr>';
+        for (var c = 0; c < cols; c++) html += '<td><p><br></p></td>';
+        html += '</tr>';
+    }
+    html += '</tbody></table><p><br></p>';
+    var range = quill.getSelection(true);
+    quill.clipboard.dangerouslyPasteHTML(range ? range.index : quill.getLength(), html);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// CODE INSERT MODAL
+// ══════════════════════════════════════════════════════════════════════
+var _codeQuill = null;
+
+function openCodeModal(quill) {
+    _codeQuill = quill;
+    document.getElementById('code-input').value = '';
+    document.getElementById('code-modal').classList.add('open');
+    setTimeout(function () { document.getElementById('code-input').focus(); }, 60);
+}
+function closeCodeModal() {
+    document.getElementById('code-modal').classList.remove('open');
+    _codeQuill = null;
+}
+document.getElementById('code-modal').addEventListener('click', function (e) {
+    if (e.target === this) closeCodeModal();
+});
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeCodeModal();
+});
+
+function doInsertCode() {
+    var lang = document.getElementById('code-lang').value;
+    var code = document.getElementById('code-input').value;
+    if (!code.trim()) { closeCodeModal(); return; }
+
+    var escaped = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    var html = '<pre class="ql-syntax" data-language="' + lang + '">' + escaped + '</pre><p><br></p>';
+    var range = _codeQuill.getSelection(true);
+    _codeQuill.clipboard.dangerouslyPasteHTML(range ? range.index : _codeQuill.getLength(), html);
+    closeCodeModal();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// IMAGE RESIZE OVERLAY
+// ══════════════════════════════════════════════════════════════════════
+var imgResizer = {
+    el: null, img: null, quill: null, dragging: false,
+
+    init: function () {
+        var self = this;
+        var el = document.createElement('div');
+        el.id = 'img-resize-overlay';
+
+        // 8 resize handles
+        ['nw','n','ne','e','se','s','sw','w'].forEach(function (pos) {
+            var h = document.createElement('div');
+            h.className = 'irh ' + pos;
+            h.addEventListener('mousedown', function (e) {
+                e.preventDefault(); e.stopPropagation();
+                self._startDrag(e, pos);
+            });
+            el.appendChild(h);
+        });
+
+        // Size badge
+        var badge = document.createElement('div');
+        badge.className = 'ir-badge';
+        el.appendChild(badge);
+
+        // Alignment bar
+        var bar = document.createElement('div');
+        bar.className = 'ir-bar';
+        [['Float L','left'],['Center','center'],['Float R','right'],['Reset','reset']].forEach(function (pair) {
+            var btn = document.createElement('button');
+            btn.type = 'button'; btn.textContent = pair[0];
+            btn.addEventListener('click', function (e) { e.stopPropagation(); self._setAlign(pair[1]); });
+            bar.appendChild(btn);
+        });
+        el.appendChild(bar);
+
+        document.body.appendChild(el);
+        this.el = el;
+
+        // Click outside → hide
+        document.addEventListener('mousedown', function (e) {
+            if (self.img && !el.contains(e.target) && e.target !== self.img && !self.dragging) {
+                self.hide();
+            }
+        });
+
+        // Reposition on scroll / resize
+        window.addEventListener('scroll', function () { self._repos(); }, true);
+        window.addEventListener('resize', function () { self._repos(); });
+
+        // Wire to both editors
+        [{ q: quillEn }, { q: quillDe }].forEach(function (entry) {
+            entry.q.root.addEventListener('click', function (e) {
+                if (e.target.tagName === 'IMG') self.show(e.target, entry.q);
+            });
+        });
+    },
+
+    show: function (img, quill) {
+        if (this.img) this.img.style.outline = '';
+        this.img = img; this.quill = quill;
+        img.style.outline = '2px solid var(--primary,#7c6cf0)';
+        this._repos();
+        this.el.style.display = 'block';
+    },
+
+    hide: function () {
+        if (this.img) this.img.style.outline = '';
+        this.img = null;
+        this.el.style.display = 'none';
+    },
+
+    _repos: function () {
+        if (!this.img) return;
+        var r = this.img.getBoundingClientRect();
+        this.el.style.left = r.left + 'px';
+        this.el.style.top  = r.top  + 'px';
+        this.el.style.width  = r.width  + 'px';
+        this.el.style.height = r.height + 'px';
+        this.el.querySelector('.ir-badge').textContent = Math.round(r.width) + ' × ' + Math.round(r.height) + ' px';
+    },
+
+    _startDrag: function (e, handle) {
+        var self = this;
+        this.dragging = true;
+        var sx = e.clientX, sy = e.clientY;
+        var sw = this.img.offsetWidth || this.img.naturalWidth;
+        var sh = this.img.offsetHeight || this.img.naturalHeight;
+        var ar = sw / sh;
+
+        function onMove(ev) {
+            var dx = ev.clientX - sx, dy = ev.clientY - sy;
+            var nw = sw, nh = sh;
+            if (handle.includes('e')) nw = Math.max(40, sw + dx);
+            if (handle.includes('w')) nw = Math.max(40, sw - dx);
+            if (handle.includes('s')) nh = Math.max(30, sh + dy);
+            if (handle.includes('n')) nh = Math.max(30, sh - dy);
+            // Corner = keep aspect ratio unless Alt held
+            if (handle.length === 2 && !ev.altKey) nh = nw / ar;
+            self.img.style.width  = Math.round(nw) + 'px';
+            self.img.style.height = Math.round(nh) + 'px';
+            self._repos();
+        }
+        function onUp() {
+            self.dragging = false;
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            if (self.quill) self.quill.update();
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    },
+
+    _setAlign: function (align) {
+        if (!this.img) return;
+        var w = this.img.style.width, h = this.img.style.height;
+        this.img.style.cssText = '';
+        if (w) this.img.style.width  = w;
+        if (h) this.img.style.height = h;
+        switch (align) {
+            case 'left':   this.img.style.float = 'left';  this.img.style.margin = '0 1rem .5rem 0'; break;
+            case 'right':  this.img.style.float = 'right'; this.img.style.margin = '0 0 .5rem 1rem'; break;
+            case 'center': this.img.style.display = 'block'; this.img.style.margin = '.5rem auto'; break;
+        }
+        if (this.quill) this.quill.update();
+        this._repos();
+    }
+};
+imgResizer.init();
+
+// ══════════════════════════════════════════════════════════════════════
+// TABLE CONTEXT TOOLBAR
+// ══════════════════════════════════════════════════════════════════════
+var tableCtx = { bar: null, ctx: null, quill: null };
+
+tableCtx.bar = document.getElementById('table-ctx-bar');
+tableCtx.bar.style.display = 'none';
+
+tableCtx.bar.addEventListener('mousedown', function (e) { e.preventDefault(); });
+tableCtx.bar.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-ta]');
+    if (!btn || !tableCtx.ctx) return;
+    tableCtx._act(btn.dataset.ta, btn.dataset.color);
+});
+
+tableCtx.show = function (ctx, quill) {
+    this.ctx = ctx; this.quill = quill;
+    this.bar.style.display = 'flex';
+    this._repos();
+};
+tableCtx.hide = function () {
+    this.ctx = null;
+    this.bar.style.display = 'none';
+};
+tableCtx._repos = function () {
+    if (!this.ctx) return;
+    var r = this.ctx.table.getBoundingClientRect();
+    var bh = this.bar.offsetHeight || 36;
+    var top = r.top - bh - 6;
+    if (top < 4) top = r.bottom + 6;
+    this.bar.style.left = Math.max(4, r.left) + 'px';
+    this.bar.style.top  = top + 'px';
+};
+tableCtx._makeRow = function (cols) {
+    var tr = document.createElement('tr');
+    for (var i = 0; i < cols; i++) { var td = document.createElement('td'); td.innerHTML = '<p><br></p>'; tr.appendChild(td); }
+    return tr;
+};
+tableCtx._act = function (action, color) {
+    var c = this.ctx;
+    var numCols = c.tr.children.length;
+    switch (action) {
+        case 'row-above': c.tbody.insertBefore(this._makeRow(numCols), c.tr); break;
+        case 'row-below': c.tr.insertAdjacentElement('afterend', this._makeRow(numCols)); break;
+        case 'del-row':
+            if (c.tbody.children.length > 1) c.tr.remove();
+            else { c.table.remove(); this.hide(); }
+            break;
+        case 'col-left':
+            Array.from(c.tbody.children).forEach(function (row) {
+                var td = document.createElement('td'); td.innerHTML = '<p><br></p>';
+                row.insertBefore(td, row.children[c.colIndex]);
+            }); break;
+        case 'col-right':
+            Array.from(c.tbody.children).forEach(function (row) {
+                var td = document.createElement('td'); td.innerHTML = '<p><br></p>';
+                var next = row.children[c.colIndex + 1];
+                if (next) row.insertBefore(td, next); else row.appendChild(td);
+            }); break;
+        case 'del-col':
+            if (numCols > 1) Array.from(c.tbody.children).forEach(function (row) { if (row.children[c.colIndex]) row.children[c.colIndex].remove(); });
+            break;
+        case 'cell-bg': c.td.style.backgroundColor = color || ''; break;
+        case 'del-table': c.table.remove(); this.hide(); break;
+    }
+    if (this.quill) this.quill.update();
+    if (action !== 'del-row' && action !== 'del-table') this._repos();
+};
+
+function getTableCtx(quill, index) {
+    try {
+        var leaf = quill.getLeaf(index);
+        if (!leaf || !leaf[0]) return null;
+        var node = leaf[0].domNode;
+        var td = node.closest ? node.closest('td') : (node.parentElement ? node.parentElement.closest('td') : null);
+        if (!td) return null;
+        var tr = td.parentElement;
+        var tbody = tr.parentElement;
+        var table = (tbody.tagName === 'TBODY') ? tbody.parentElement : tbody;
+        return { table: table, tbody: tbody, tr: tr, td: td,
+                 rowIndex: Array.from(tbody.children).indexOf(tr),
+                 colIndex: Array.from(tr.children).indexOf(td) };
+    } catch (err) { return null; }
+}
+
+[{ q: quillEn }, { q: quillDe }].forEach(function (entry) {
+    entry.q.on('selection-change', function (range) {
+        if (!range) { tableCtx.hide(); return; }
+        var ctx = getTableCtx(entry.q, range.index);
+        if (ctx) tableCtx.show(ctx, entry.q);
+        else tableCtx.hide();
+    });
+});
+
+window.addEventListener('scroll', function () { tableCtx._repos(); }, true);
+
+// ══════════════════════════════════════════════════════════════════════
+// FULLSCREEN
+// ══════════════════════════════════════════════════════════════════════
+function toggleFullscreen(wrapperId, btn) {
+    var wrap = document.getElementById(wrapperId);
+    var isNow = wrap.classList.toggle('fullscreen');
+    btn.title = isNow ? 'Exit Fullscreen' : 'Fullscreen';
+    if (isNow) {
+        document.addEventListener('keydown', function esc(e) {
+            if (e.key === 'Escape') { wrap.classList.remove('fullscreen'); btn.title = 'Fullscreen'; document.removeEventListener('keydown', esc); }
+        });
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// WORD COUNT
+// ══════════════════════════════════════════════════════════════════════
+function updateWC(quill, spanId) {
+    var raw = quill.getText();
+    var text = raw.trim();
+    var words = text.length ? text.split(/\s+/).filter(Boolean).length : 0;
+    document.getElementById(spanId).textContent = words + ' words · ' + Math.max(0, raw.length - 1) + ' characters';
+}
+quillEn.on('text-change', function () { updateWC(quillEn, 'wc-en'); });
+quillDe.on('text-change', function () { updateWC(quillDe, 'wc-de'); });
+updateWC(quillEn, 'wc-en');
+updateWC(quillDe, 'wc-de');
+
+// ══════════════════════════════════════════════════════════════════════
+// TAB SWITCHING
+// ══════════════════════════════════════════════════════════════════════
+function switchTab(lang) {
+    document.querySelectorAll('.lang-tab').forEach(function (b) { b.classList.remove('active'); });
+    document.querySelectorAll('.lang-panel').forEach(function (p) { p.classList.remove('active'); });
+    event.currentTarget.classList.add('active');
+    document.getElementById('panel-' + lang).classList.add('active');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// SUBMIT SYNC
+// ══════════════════════════════════════════════════════════════════════
+function syncAllContent() {
+    var enHtml = quillEn.root.innerHTML;
+    var deHtml = quillDe.root.innerHTML;
+    if (!enHtml || enHtml === '<p><br></p>' || enHtml.trim() === '') {
+        document.querySelectorAll('.lang-tab')[0].click();
+        alert('English content is required.');
+        return false;
+    }
+    document.getElementById('content').value = enHtml;
+    document.getElementById('contentDe').value = (deHtml && deHtml !== '<p><br></p>') ? deHtml : '';
+    return true;
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learning Paths — Azubix</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/categories.css}">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navbar -->
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <!-- ==============================
+         DARK HEADER BANNER
+         ============================== -->
+    <div class="cat-banner">
+        <div class="cat-banner-inner">
+            <div class="cat-banner-tag">
+                <span class="tag-dot"></span>
+                <span th:text="#{cat.tag}">// EXPLORE</span>
+            </div>
+            <h1>
+                <span th:text="#{cat.titleLine1}">Learning</span>
+                <span class="banner-highlight" th:text="#{cat.titleLine2}">Paths</span>
+            </h1>
+            <p class="cat-banner-sub" th:text="#{cat.subtitle}">
+                Structured, hands-on learning across Computer Science,
+                Project Management, Cybersecurity and more.
+            </p>
+
+            <!-- Quick stats -->
+            <div class="cat-banner-stats" th:if="${!#lists.isEmpty(categories)}">
+                <div class="cat-stat">
+                    <span class="cat-stat-num" th:text="${#lists.size(categories)}">0</span>
+                    <span th:text="#{cat.categories}">categories</span>
+                </div>
+                <div class="cat-stat">
+                    <span class="cat-stat-num" th:text="${totalTopics}">0</span>
+                    <span th:text="#{cat.topics}">topics</span>
+                </div>
+                <div class="cat-stat">
+                    <span class="cat-stat-num" th:text="#{cat.free}">Free</span>
+                    <span th:text="#{cat.always}">always</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==============================
+         CATEGORY CARDS
+         ============================== -->
+    <div class="cat-section" th:if="${!#lists.isEmpty(categories)}">
+        <div class="cat-grid">
+            <a th:each="category, iterStat : ${categories}"
+               th:href="@{/category/{id}(id=${category.id})}"
+               class="cat-card">
+
+                <!-- Header row: icon + title -->
+                <div class="cat-card-header">
+                    <div class="cat-card-icon"
+                         th:with="icons=${ {'&#128187;','&#128274;','&#128202;','&#9881;','&#128640;','&#128161;'} }"
+                         th:utext="${icons[iterStat.index % #lists.size(icons)]}">
+                        &#128187;
+                    </div>
+                    <div class="cat-card-title">
+                        <h3 th:text="${category.name}">Category Name</h3>
+                        <span class="cat-topic-count">
+                            <span th:text="${#lists.size(category.topics)}">0</span>
+                            <span th:text="#{cat.topics}">topics</span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <p class="cat-card-desc"
+                   th:text="${category.description != null ? category.description : 'Explore topics and articles in this category.'}">
+                    Description goes here
+                </p>
+
+                <!-- Progress bar (logged-in users only) -->
+                <div sec:authorize="isAuthenticated()"
+                     th:if="${progressMap != null}" class="cat-progress">
+                    <div class="cat-progress-track">
+                        <div class="cat-progress-fill"
+                             th:style="'width: ' + ${progressMap.get(category.id) != null ? progressMap.get(category.id) : 0} + '%'">
+                        </div>
+                    </div>
+                    <div class="cat-progress-label">
+                        <span class="cat-progress-text" th:text="#{progress.text}">Progress</span>
+                        <span class="cat-progress-pct">
+                            <span th:text="${progressMap.get(category.id) != null ? progressMap.get(category.id) : 0}">0</span>%
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="cat-card-footer">
+                    <span class="cat-card-label" th:text="#{cat.start}">Start learning</span>
+                    <span class="cat-card-arrow">&#8594;</span>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Empty state -->
+    <div th:if="${#lists.isEmpty(categories)}" class="cat-section">
+        <div class="cat-empty">
+            <div class="cat-empty-card">
+                <div class="cat-empty-icon">&#128221;</div>
+                <h2 th:text="#{cat.empty.title}">No courses yet</h2>
+                <p th:text="#{cat.empty.text}">An admin needs to create categories, topics, and articles to get started.</p>
+                <a th:href="@{/admin}" class="btn btn-primary" sec:authorize="hasRole('ADMIN')">
+                    Go to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==============================
+         EARNED CERTIFICATES SECTION
+         Only shown to logged-in users who have at least one 100% category
+         ============================== -->
+    <div sec:authorize="isAuthenticated()"
+         th:if="${completedCategories != null and !#lists.isEmpty(completedCategories)}">
+        <div class="cert-section">
+            <div class="cert-section-inner">
+
+                <!-- Section header -->
+                <div class="cert-header">
+                    <div class="cert-header-icon">&#127891;</div>
+                    <div>
+                        <h2 th:text="#{cert.title}">Earned Certificates</h2>
+                        <p th:text="#{cert.subtitle}">Download your certificates of completion.</p>
+                    </div>
+                </div>
+
+                <!-- One card per completed category -->
+                <div class="cert-grid">
+                    <div th:each="category : ${completedCategories}" class="cert-card">
+
+                        <!-- Trophy icon -->
+                        <div class="cert-card-icon">&#127942;</div>
+
+                        <!-- Info -->
+                        <div class="cert-card-body">
+                            <span class="cert-badge" th:text="#{cert.badge}">100% Complete</span>
+                            <h3 th:text="${category.name}">Category Name</h3>
+                            <p th:text="#{cert.cardSub}">All topics completed</p>
+                        </div>
+
+                        <!-- Download link -->
+                        <a th:href="@{/certificate/{id}(id=${category.id})}"
+                           class="cert-download-btn"
+                           th:title="#{cert.download}">
+                            &#11015; <span th:text="#{cert.download}">Download PDF</span>
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

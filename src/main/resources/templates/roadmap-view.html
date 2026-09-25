@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${roadmap.title} + ' — Azubix'">Roadmap — Azubix</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/roadmap.css}">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
+</head>
+<body style="overflow:hidden;">
+
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="rmv-page">
+
+    <!-- ── Top bar ─────────────────────────────────────────────── -->
+    <div class="rmv-topbar">
+        <a th:href="@{/roadmaps}" class="rmv-back-btn">← Roadmaps</a>
+
+        <div class="rmv-topbar-title" th:text="${roadmap.title}">Roadmap</div>
+
+        <div class="rmv-topbar-plan"
+             th:classappend="${roadmap.planType.name() == 'SAFE_6M'} ? ' rm-plan-safe' :
+                             (${roadmap.planType.name() == 'FAST_3M'} ? ' rm-plan-fast' : ' rm-plan-crazy')"
+             th:text="${roadmap.planType.label} + ' · ' + ${roadmap.planType.duration}">Plan</div>
+
+        <!-- Progress (auth) -->
+        <div sec:authorize="isAuthenticated()" class="rmv-progress-wrap">
+            <div class="rmv-progress-bar-outer">
+                <div class="rmv-progress-bar-fill" id="topbarProgressFill"
+                     th:style="'width:' + ${progressPct} + '%'"></div>
+            </div>
+            <span class="rmv-progress-label" id="topbarProgressLabel">
+                <span id="topbarCompleted" th:text="${completedCount}">0</span>/<span th:text="${totalNodes}">0</span>
+            </span>
+        </div>
+    </div>
+
+    <!-- ── Toolbar ─────────────────────────────────────────────── -->
+    <div class="rmv-toolbar">
+        <button class="rmv-tool-btn active" id="btnPan" onclick="setTool('pan')">✥ Pan</button>
+        <button class="rmv-tool-btn" onclick="resetView()">⊡ Reset View</button>
+        <button class="rmv-tool-btn" onclick="fitView()">⤢ Fit</button>
+
+        <!-- Legend -->
+        <div class="rmv-legend">
+            <div class="rmv-legend-item"><div class="rmv-legend-dot" style="background:#2dd4bf;"></div> Easy</div>
+            <div class="rmv-legend-item"><div class="rmv-legend-dot" style="background:#f59e0b;"></div> Medium</div>
+            <div class="rmv-legend-item"><div class="rmv-legend-dot" style="background:#f87171;"></div> Hard</div>
+            <div class="rmv-legend-item"><div class="rmv-legend-dot" style="background:#60a5fa;"></div> Revision</div>
+            <div class="rmv-legend-item"><div class="rmv-legend-dot" style="background:#a78bfa;"></div> Mock Test</div>
+            <div class="rmv-legend-item" style="margin-left:0.5rem;">
+                <div class="rmv-legend-dot" style="background:rgba(45,212,191,0.5);border:1.5px solid #2dd4bf;"></div>
+                Done
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Canvas ─────────────────────────────────────────────── -->
+    <div class="rmv-canvas-wrap" id="canvasWrap">
+        <svg id="mainSvg" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L8,3 z" fill="rgba(124,108,240,0.6)"/>
+                </marker>
+            </defs>
+            <!-- Transformed group for pan/zoom -->
+            <g id="viewport">
+                <g id="edgesGroup"></g>
+                <g id="nodesGroup"></g>
+            </g>
+        </svg>
+
+        <!-- Zoom controls -->
+        <div class="rmv-zoom-controls">
+            <button class="rmv-zoom-btn" onclick="zoom(1.2)" title="Zoom in">+</button>
+            <button class="rmv-zoom-btn" onclick="zoom(0.8)" title="Zoom out">−</button>
+            <button class="rmv-zoom-btn" onclick="fitView()" title="Fit" style="font-size:0.7rem;">⤢</button>
+        </div>
+
+        <!-- Mini map -->
+        <div class="rmv-minimap" id="minimap">
+            <svg id="minimapSvg" xmlns="http://www.w3.org/2000/svg"></svg>
+        </div>
+    </div>
+
+    <!-- ── Node detail panel ───────────────────────────────────── -->
+    <div class="rmv-panel" id="nodePanel">
+        <div class="rmv-panel-header">
+            <div class="rmv-panel-color" id="panelColor"></div>
+            <div class="rmv-panel-title" id="panelTitle">Node</div>
+            <button class="rmv-panel-close" onclick="closePanel()">✕</button>
+        </div>
+        <div class="rmv-panel-body">
+            <div class="rmv-panel-meta" id="panelMeta"></div>
+            <div class="rmv-panel-desc" id="panelDesc"></div>
+
+            <div class="rmv-panel-section-title" id="resourcesHeading" style="display:none;">Resources</div>
+            <div id="panelResources"></div>
+
+            <button class="rmv-complete-btn not-done" id="completeBtn"
+                    sec:authorize="isAuthenticated()" onclick="toggleComplete()">
+                ○ Mark as Complete
+            </button>
+            <button class="rmv-complete-btn" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);color:#5a5a7a;cursor:default;"
+                    sec:authorize="!isAuthenticated()">
+                Sign in to track progress
+            </button>
+        </div>
+    </div>
+
+</div><!-- /rmv-page -->
+
+<!-- ── Inline data ─────────────────────────────────────────── -->
+<script th:inline="javascript">
+/*<![CDATA[*/
+const GRAPH        = /*[(${graphJson})]*/ {"nodes":[],"edges":[]};
+const PROGRESS     = /*[(${progressJson})]*/ {};
+const BOOKMARKS    = /*[(${bookmarkJson})]*/ {};
+const ROADMAP_ID   = /*[[${roadmap.id}]]*/ 0;
+const IS_AUTH      = /*[[${#authorization.expression('isAuthenticated()')}]]*/ false;
+const TOTAL_NODES  = /*[[${totalNodes}]]*/ 0;
+/*]]>*/
+</script>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+// CONSTANTS & STATE
+// ══════════════════════════════════════════════════════════════════
+const NODE_W = 180, NODE_H = 60;
+let vpX = 0, vpY = 0, vpScale = 1;
+let isPanning = false, panStartX = 0, panStartY = 0, vpStartX = 0, vpStartY = 0;
+let activeNodeId = null;
+let completedSet = new Set();
+
+// Parse initial progress
+Object.keys(PROGRESS).forEach(k => { if (PROGRESS[k]) completedSet.add(Number(k)); });
+
+const svg        = document.getElementById('mainSvg');
+const viewport   = document.getElementById('viewport');
+const edgesGroup = document.getElementById('edgesGroup');
+const nodesGroup = document.getElementById('nodesGroup');
+const canvasWrap = document.getElementById('canvasWrap');
+
+// ══════════════════════════════════════════════════════════════════
+// BUILD GRAPH
+// ══════════════════════════════════════════════════════════════════
+function buildGraph() {
+    edgesGroup.innerHTML = '';
+    nodesGroup.innerHTML = '';
+
+    // Draw edges first (behind nodes)
+    GRAPH.edges.forEach(function(e) {
+        const from = GRAPH.nodes.find(function(n) { return n.id === e.from; });
+        const to   = GRAPH.nodes.find(function(n) { return n.id === e.to;   });
+        if (!from || !to) return;
+
+        const x1 = from.posX + NODE_W / 2, y1 = from.posY + NODE_H;
+        const x2 = to.posX   + NODE_W / 2, y2 = to.posY;
+        const cy = (y1 + y2) / 2;
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', `M${x1},${y1} C${x1},${cy} ${x2},${cy} ${x2},${y2}`);
+        path.setAttribute('class', 'rm-edge');
+        path.setAttribute('stroke', 'rgba(124,108,240,0.45)');
+        path.setAttribute('marker-end', 'url(#arrow)');
+        edgesGroup.appendChild(path);
+    });
+
+    // Draw nodes
+    GRAPH.nodes.forEach(function(node) {
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('class', 'rm-node-group');
+        g.setAttribute('transform', `translate(${node.posX},${node.posY})`);
+        g.setAttribute('data-id', node.id);
+
+        const isDone = completedSet.has(node.id);
+        const color  = isDone ? '#2dd4bf' : node.color;
+        const fillBg = isDone ? 'rgba(45,212,191,0.07)' : 'rgba(16,16,32,0.95)';
+
+        // Shadow
+        const shadow = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        shadow.setAttribute('x', '3'); shadow.setAttribute('y', '5');
+        shadow.setAttribute('width', NODE_W); shadow.setAttribute('height', NODE_H);
+        shadow.setAttribute('rx', '12'); shadow.setAttribute('fill', 'rgba(0,0,0,0.35)');
+        g.appendChild(shadow);
+
+        // Main rect
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('width', NODE_W); rect.setAttribute('height', NODE_H);
+        rect.setAttribute('rx', '12'); rect.setAttribute('fill', fillBg);
+        rect.setAttribute('stroke', color); rect.setAttribute('stroke-width', '1.5');
+        g.appendChild(rect);
+
+        // Color accent top bar
+        const bar = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        bar.setAttribute('width', '32'); bar.setAttribute('height', '3');
+        bar.setAttribute('x', '12'); bar.setAttribute('y', '0');
+        bar.setAttribute('rx', '1.5'); bar.setAttribute('fill', color);
+        bar.setAttribute('opacity', '0.9');
+        g.appendChild(bar);
+
+        // Title text
+        const titleEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        titleEl.setAttribute('x', '12'); titleEl.setAttribute('y', '24');
+        titleEl.setAttribute('class', 'rm-node-title');
+        titleEl.setAttribute('fill', isDone ? '#2dd4bf' : '#e8e8f8');
+        const titleText = node.title.length > 22 ? node.title.substring(0, 21) + '…' : node.title;
+        titleEl.textContent = titleText;
+        g.appendChild(titleEl);
+
+        // Meta line
+        const metaEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        metaEl.setAttribute('x', '12'); metaEl.setAttribute('y', '40');
+        metaEl.setAttribute('class', 'rm-node-meta');
+        metaEl.setAttribute('fill', '#5a5a7a');
+        const mins = node.estimatedMinutes || 0;
+        const timeStr = mins >= 60 ? Math.round(mins/60) + 'h' : mins + 'm';
+        const resCount = node.resourceCount || 0;
+        metaEl.textContent = `${node.difficultyLabel}  ·  ${timeStr}${resCount > 0 ? '  ·  ' + resCount + ' res' : ''}`;
+        g.appendChild(metaEl);
+
+        // Done checkmark
+        if (isDone) {
+            const check = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            check.setAttribute('x', NODE_W - 16); check.setAttribute('y', '18');
+            check.setAttribute('fill', '#2dd4bf'); check.setAttribute('font-size', '12');
+            check.textContent = '✓';
+            g.appendChild(check);
+        }
+
+        // Resource indicator dot
+        if (!isDone && node.resourceCount > 0) {
+            const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            dot.setAttribute('cx', NODE_W - 12); dot.setAttribute('cy', '12');
+            dot.setAttribute('r', '4'); dot.setAttribute('fill', color); dot.setAttribute('opacity', '0.7');
+            g.appendChild(dot);
+        }
+
+        // Click handler
+        g.addEventListener('click', function(e) {
+            e.stopPropagation();
+            openPanel(node.id);
+        });
+
+        // Hover effect
+        g.addEventListener('mouseenter', function() {
+            rect.setAttribute('stroke-width', '2.5');
+            rect.setAttribute('filter', `drop-shadow(0 0 12px ${color}55)`);
+        });
+        g.addEventListener('mouseleave', function() {
+            rect.setAttribute('stroke-width', '1.5');
+            rect.removeAttribute('filter');
+        });
+
+        nodesGroup.appendChild(g);
+    });
+
+    updateMinimap();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PAN & ZOOM
+// ══════════════════════════════════════════════════════════════════
+function applyViewport() {
+    viewport.setAttribute('transform', `translate(${vpX},${vpY}) scale(${vpScale})`);
+    updateMinimap();
+}
+
+function zoom(factor) {
+    const rect = canvasWrap.getBoundingClientRect();
+    const cx = rect.width / 2, cy = rect.height / 2;
+    vpX = cx + (vpX - cx) * factor;
+    vpY = cy + (vpY - cy) * factor;
+    vpScale *= factor;
+    vpScale = Math.min(Math.max(vpScale, 0.15), 3);
+    applyViewport();
+}
+
+function resetView() {
+    vpX = 60; vpY = 60; vpScale = 1;
+    applyViewport();
+}
+
+function fitView() {
+    if (!GRAPH.nodes.length) return;
+    const rect = canvasWrap.getBoundingClientRect();
+    const pad = 60;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    GRAPH.nodes.forEach(function(n) {
+        minX = Math.min(minX, n.posX); minY = Math.min(minY, n.posY);
+        maxX = Math.max(maxX, n.posX + NODE_W); maxY = Math.max(maxY, n.posY + NODE_H);
+    });
+    const gw = maxX - minX + pad*2, gh = maxY - minY + pad*2;
+    vpScale = Math.min((rect.width / gw), (rect.height / gh), 1.2);
+    vpX = (rect.width  - (maxX + minX) * vpScale) / 2;
+    vpY = (rect.height - (maxY + minY) * vpScale) / 2;
+    applyViewport();
+}
+
+// Mouse pan
+canvasWrap.addEventListener('mousedown', function(e) {
+    if (e.target === svg || e.target === viewport ||
+        e.target.tagName === 'svg' || e.target === document.getElementById('edgesGroup')) {
+        isPanning = true;
+        panStartX = e.clientX; panStartY = e.clientY;
+        vpStartX = vpX; vpStartY = vpY;
+        canvasWrap.classList.add('grabbing');
+    }
+});
+window.addEventListener('mousemove', function(e) {
+    if (!isPanning) return;
+    vpX = vpStartX + (e.clientX - panStartX);
+    vpY = vpStartY + (e.clientY - panStartY);
+    applyViewport();
+});
+window.addEventListener('mouseup', function() {
+    isPanning = false;
+    canvasWrap.classList.remove('grabbing');
+});
+
+// Wheel zoom
+canvasWrap.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.1 : 0.9;
+    const rect = canvasWrap.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    vpX = mx + (vpX - mx) * factor;
+    vpY = my + (vpY - my) * factor;
+    vpScale *= factor;
+    vpScale = Math.min(Math.max(vpScale, 0.15), 3);
+    applyViewport();
+}, { passive: false });
+
+function setTool(t) {
+    document.getElementById('btnPan').classList.toggle('active', t === 'pan');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// NODE PANEL
+// ══════════════════════════════════════════════════════════════════
+function openPanel(nodeId) {
+    activeNodeId = nodeId;
+    const panel = document.getElementById('nodePanel');
+    panel.classList.add('open');
+
+    // Load node data via AJAX
+    fetch(`/roadmaps/${ROADMAP_ID}/node/${nodeId}/resources`)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            document.getElementById('panelColor').style.background = data.color;
+            document.getElementById('panelTitle').textContent = data.title;
+
+            // Meta chips
+            const metaEl = document.getElementById('panelMeta');
+            metaEl.innerHTML = '';
+            addChip(metaEl, data.difficulty, data.color);
+            if (data.phase) addChip(metaEl, data.phase, 'rgba(124,108,240,0.5)');
+            if (data.estimatedMinutes) {
+                const m = data.estimatedMinutes;
+                addChip(metaEl, m >= 60 ? Math.round(m/60) + 'h study' : m + 'min', 'rgba(255,255,255,0.15)');
+            }
+
+            // Description
+            document.getElementById('panelDesc').textContent = data.description || '';
+
+            // Resources
+            const resEl = document.getElementById('panelResources');
+            const resHeading = document.getElementById('resourcesHeading');
+            resEl.innerHTML = '';
+            if (data.resources && data.resources.length > 0) {
+                resHeading.style.display = '';
+                data.resources.forEach(function(res) {
+                    const a = document.createElement('a');
+                    a.href = res.url || '#';
+                    if (res.url) a.target = '_blank';
+                    a.className = 'rmv-resource-item';
+                    a.innerHTML = `
+                        <div class="rmv-resource-icon" style="background:${res.typeColor}22;">
+                            <span style="color:${res.typeColor};font-size:0.85rem;">${res.typeIcon}</span>
+                        </div>
+                        <span class="rmv-resource-title">${res.title}</span>
+                        ${res.estimatedMinutes ? `<span class="rmv-resource-time">${res.estimatedMinutes}m</span>` : ''}
+                    `;
+                    resEl.appendChild(a);
+                });
+            } else {
+                resHeading.style.display = 'none';
+            }
+
+            // Complete button state
+            updateCompleteBtn();
+        });
+}
+
+function addChip(container, text, color) {
+    const span = document.createElement('span');
+    span.className = 'rmv-panel-chip';
+    span.style.cssText = `background:${color}22;border:1px solid ${color}55;color:${color};`;
+    span.textContent = text;
+    container.appendChild(span);
+}
+
+function closePanel() {
+    document.getElementById('nodePanel').classList.remove('open');
+    activeNodeId = null;
+}
+
+function updateCompleteBtn() {
+    if (!IS_AUTH) return;
+    const btn = document.getElementById('completeBtn');
+    if (!btn) return;
+    const done = completedSet.has(activeNodeId);
+    btn.className = 'rmv-complete-btn ' + (done ? 'done' : 'not-done');
+    btn.textContent = done ? '✓ Completed' : '○ Mark as Complete';
+}
+
+function toggleComplete() {
+    if (!IS_AUTH || !activeNodeId) return;
+    fetch(`/roadmaps/${ROADMAP_ID}/node/${activeNodeId}/toggle`, {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': getCsrf() }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (completedSet.has(activeNodeId)) {
+            completedSet.delete(activeNodeId);
+        } else {
+            completedSet.add(activeNodeId);
+        }
+        updateCompleteBtn();
+        updateProgressBar(data.completed, data.total);
+        // Rebuild that node visually
+        const nodeData = GRAPH.nodes.find(function(n) { return n.id === activeNodeId; });
+        if (nodeData) {
+            const oldG = nodesGroup.querySelector(`[data-id="${activeNodeId}"]`);
+            if (oldG) nodesGroup.removeChild(oldG);
+            // Re-render single node by rebuilding entire graph
+            buildGraph();
+        }
+    });
+}
+
+function updateProgressBar(completed, total) {
+    const pct = total > 0 ? Math.round(completed * 100 / total) : 0;
+    const fill = document.getElementById('topbarProgressFill');
+    const label = document.getElementById('topbarCompleted');
+    if (fill)  fill.style.width = pct + '%';
+    if (label) label.textContent = completed;
+}
+
+function getCsrf() {
+    const m = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+    return m ? m[1] : '';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// MINI-MAP
+// ══════════════════════════════════════════════════════════════════
+function updateMinimap() {
+    const mmSvg = document.getElementById('minimapSvg');
+    mmSvg.innerHTML = '';
+    if (!GRAPH.nodes.length) return;
+
+    const mmW = 160, mmH = 100, pad = 8;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    GRAPH.nodes.forEach(function(n) {
+        minX = Math.min(minX, n.posX); minY = Math.min(minY, n.posY);
+        maxX = Math.max(maxX, n.posX + NODE_W); maxY = Math.max(maxY, n.posY + NODE_H);
+    });
+    const gw = maxX - minX || 1, gh = maxY - minY || 1;
+    const scale = Math.min((mmW - pad*2) / gw, (mmH - pad*2) / gh);
+
+    GRAPH.nodes.forEach(function(n) {
+        const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        const x = pad + (n.posX - minX) * scale;
+        const y = pad + (n.posY - minY) * scale;
+        r.setAttribute('x', x); r.setAttribute('y', y);
+        r.setAttribute('width', NODE_W * scale); r.setAttribute('height', NODE_H * scale);
+        r.setAttribute('rx', '2');
+        r.setAttribute('fill', completedSet.has(n.id) ? '#2dd4bf' : n.color);
+        r.setAttribute('opacity', '0.6');
+        mmSvg.appendChild(r);
+    });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════════
+buildGraph();
+fitView();
+</script>
+
+</body>
+</html>

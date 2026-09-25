@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error - LearnHub</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navbar -->
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <div style="max-width: 600px; margin: 4rem auto; text-align: center; padding: 2rem;">
+        <div class="card" style="padding: 3rem;">
+            <h1 style="font-size: 4rem; color: var(--primary); margin-bottom: 1rem;">
+                &#128533;
+            </h1>
+            <h2>Oops! Something went wrong</h2>
+            <p style="color: var(--gray); margin: 1rem 0;">
+                The page you're looking for doesn't exist or an error occurred.
+            </p>
+            <p th:if="${error}" th:text="${error}" style="color: var(--danger); font-size: 0.9rem;"></p>
+            <a th:href="@{/}" class="btn btn-primary" style="margin-top: 1rem;">
+                Back to Home
+            </a>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

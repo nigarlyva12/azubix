@@ -1,0 +1,45 @@
+<!-- Azubix Footer Fragment -->
+<footer th:fragment="footer" class="footer"
+        xmlns:th="http://www.thymeleaf.org">
+
+    <!-- Top gradient line -->
+    <div class="footer-glow-line"></div>
+
+    <div class="footer-inner">
+
+        <!-- Brand side -->
+        <div class="footer-brand">
+            <a href="/" class="footer-logo">
+                <span class="footer-logo-icon">Az</span>
+                <span class="footer-logo-text">Azubi<span class="footer-logo-accent">x</span></span>
+            </a>
+            <p class="footer-tagline">
+                <span th:text="#{footer.tagline}">Learn. Prepare. Excel.</span><br>
+                <span th:text="#{footer.tagline2}">Structured learning for every candidate.</span>
+            </p>
+            <!-- Social / badge row -->
+            <div class="footer-badge-row">
+                <span class="footer-badge">&#127891; Ausbildung</span>
+                <span class="footer-badge">&#9889; Free forever</span>
+            </div>
+        </div>
+
+        <!-- Divider -->
+        <div class="footer-divider"></div>
+
+        <!-- Right side: nav links + copyright stacked -->
+        <div class="footer-right">
+            <nav class="footer-nav">
+                <a th:href="@{/}" th:text="#{nav.home}">Home</a>
+                <a th:href="@{/categories}" th:text="#{nav.courses}">Courses</a>
+                <a th:href="@{/leaderboard}" th:text="#{nav.leaderboard}">Leaderboard</a>
+                <a th:href="@{/register}" th:text="#{footer.getStarted}">Get Started</a>
+                <a th:href="@{/login}" th:text="#{footer.signIn}">Sign In</a>
+            </nav>
+            <p class="footer-copy">
+                &copy; 2026 Azubix &mdash; <span th:text="#{footer.copyright}">Crafted for learners, by learners.</span>
+            </p>
+        </div>
+
+    </div>
+</footer>

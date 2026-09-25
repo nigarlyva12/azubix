@@ -1,0 +1,61 @@
+<!-- Sidebar Fragment
+     Shows all categories for navigation.
+     Requires: ${categories}, optionally ${category} for active state. -->
+<aside th:fragment="sidebar" class="sidebar"
+       xmlns:th="http://www.thymeleaf.org">
+
+    <!-- ── Header ──────────────────────────────────────────── -->
+    <div class="sb-header">
+        <div class="sb-header-icon-wrap">🗂️</div>
+        <div class="sb-header-text">
+            <span class="sb-header-title">Study Paths</span>
+            <span class="sb-header-count"
+                  th:text="${#lists.size(categories)} + ' categories'">0 categories</span>
+        </div>
+    </div>
+
+    <!-- ── Section rule ────────────────────────────────────── -->
+    <div class="sb-rule"></div>
+
+    <!-- ── Empty state ─────────────────────────────────────── -->
+    <p th:if="${#lists.isEmpty(categories)}" class="sb-empty">
+        No categories yet.
+    </p>
+
+    <!-- ── Category list ───────────────────────────────────── -->
+    <ul class="sb-list" th:unless="${#lists.isEmpty(categories)}">
+        <li th:each="cat, iter : ${categories}">
+            <a th:href="@{/category/{id}(id=${cat.id})}"
+               class="sb-item"
+               th:classappend="${category != null and category.id == cat.id} ? ' sb-active' : ''">
+
+                <!-- Cycling emoji icon -->
+                <span class="sb-item-icon"
+                      th:text="${iter.index % 12 == 0  ? '📘' :
+                                 iter.index % 12 == 1  ? '📗' :
+                                 iter.index % 12 == 2  ? '📙' :
+                                 iter.index % 12 == 3  ? '🔬' :
+                                 iter.index % 12 == 4  ? '💡' :
+                                 iter.index % 12 == 5  ? '🖥️' :
+                                 iter.index % 12 == 6  ? '📐' :
+                                 iter.index % 12 == 7  ? '🧮' :
+                                 iter.index % 12 == 8  ? '⚙️' :
+                                 iter.index % 12 == 9  ? '📊' :
+                                 iter.index % 12 == 10 ? '🎯' : '📚'}">📘</span>
+
+                <span class="sb-item-name" th:text="${cat.name}">Category Name</span>
+
+                <span class="sb-item-arrow">›</span>
+            </a>
+        </li>
+    </ul>
+
+    <!-- ── Footer hint ─────────────────────────────────────── -->
+    <div class="sb-footer">
+        <a th:href="@{/categories}" class="sb-browse-all">
+            <span>Browse all</span>
+            <span>→</span>
+        </a>
+    </div>
+
+</aside>

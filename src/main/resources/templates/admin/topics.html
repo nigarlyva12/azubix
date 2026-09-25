@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Topics - LearnHub</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navbar -->
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <div style="max-width: 1000px; margin: 0 auto; padding: 2rem;">
+
+        <!-- Breadcrumb -->
+        <div class="breadcrumb">
+            <a th:href="@{/admin}">Dashboard</a>
+            <span class="separator">/</span>
+            <span>Topics</span>
+        </div>
+
+        <div class="page-header">
+            <h1>&#128209; Manage Topics</h1>
+        </div>
+
+        <!-- Flash Messages -->
+        <div th:if="${success}" class="alert alert-success" th:text="${success}">Success</div>
+        <div th:if="${error}" class="alert alert-error" th:text="${error}">Error</div>
+
+        <!-- Create / Edit Form -->
+        <div class="card" style="margin-bottom: 2rem;">
+            <h2 th:text="${editMode != null && editMode} ? 'Edit Topic' : 'Create New Topic'"
+                style="margin-bottom: 1rem;">
+                Create New Topic
+            </h2>
+
+            <form th:action="${editMode != null && editMode}
+                    ? @{/admin/topics/update/{id}(id=${topicDto.id})}
+                    : @{/admin/topics/create}"
+                  method="post"
+                  th:object="${topicDto}">
+
+                <div class="form-group">
+                    <label for="title">Topic Title *</label>
+                    <input type="text" id="title" th:field="*{title}"
+                           class="form-control" placeholder="e.g., Variables, Loops, SQL Injection">
+                    <p th:if="${#fields.hasErrors('title')}"
+                       th:errors="*{title}" class="form-error">Title error</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" th:field="*{description}"
+                              class="form-control" rows="2"
+                              placeholder="Brief description of this topic"></textarea>
+                </div>
+
+                <!-- Category dropdown -->
+                <div class="form-group">
+                    <label for="categoryId">Category *</label>
+                    <select id="categoryId" th:field="*{categoryId}" class="form-control">
+                        <option value="">-- Select a Category --</option>
+                        <!--
+                            th:each iterates over all categories.
+                            th:selected checks if this option matches the current value.
+                        -->
+                        <option th:each="cat : ${categories}"
+                                th:value="${cat.id}"
+                                th:text="${cat.name}">
+                            Category Name
+                        </option>
+                    </select>
+                    <p th:if="${#fields.hasErrors('categoryId')}"
+                       th:errors="*{categoryId}" class="form-error">Category error</p>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem;">
+                    <button type="submit" class="btn btn-primary"
+                            th:text="${editMode != null && editMode} ? 'Update Topic' : 'Create Topic'">
+                        Create Topic
+                    </button>
+                    <a th:if="${editMode != null && editMode}"
+                       th:href="@{/admin/topics}"
+                       class="btn btn-outline">Cancel</a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Topics Table -->
+        <div class="table-container">
+            <table th:if="${!#lists.isEmpty(topics)}">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th>Articles</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="topic : ${topics}">
+                        <td th:text="${topic.id}">1</td>
+                        <td th:text="${topic.title}">Topic</td>
+                        <td th:text="${topic.category.name}">Category</td>
+                        <td th:text="${#lists.size(topic.articles)}">0</td>
+                        <td>
+                            <div class="actions">
+                                <a th:href="@{/admin/topics/edit/{id}(id=${topic.id})}"
+                                   class="btn btn-primary btn-sm">Edit</a>
+                                <a th:href="@{/admin/topics/{id}/questions(id=${topic.id})}"
+                                   class="btn btn-outline btn-sm">📝 Questions</a>
+                                <a th:href="@{/admin/topics/{id}/flashcards(id=${topic.id})}"
+                                   class="btn btn-outline btn-sm">🃏 Flashcards</a>
+                                <form th:action="@{/admin/topics/delete/{id}(id=${topic.id})}"
+                                      method="post"
+                                      onsubmit="return confirm('Delete this topic and ALL its articles?');">
+                                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p th:if="${#lists.isEmpty(topics)}" style="text-align: center; color: var(--gray); padding: 2rem;">
+                No topics yet. Create one above!
+            </p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

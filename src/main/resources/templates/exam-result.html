@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Result — ' + ${topic.title} + ' — Azubix'">Result — Azubix</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/exam.css}">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="result-page">
+
+    <!-- ── Result hero ────────────────────────────────────────── -->
+    <div class="result-hero">
+
+        <!-- Pass / Fail circle -->
+        <div class="result-circle"
+             th:classappend="${attempt.passed} ? 'result-circle-pass' : 'result-circle-fail'">
+            <span class="result-pct"
+                  th:text="${attempt.percentage} + '%'">0%</span>
+            <span class="result-fraction"
+                  th:text="${attempt.score} + '/' + ${attempt.totalQuestions}">0/0</span>
+        </div>
+
+        <div class="result-verdict"
+             th:text="${attempt.passed} ? '🎉 Passed!' : '😔 Not quite'">Result</div>
+        <div class="result-sub"
+             th:text="${attempt.passed}
+                ? 'Great job! You passed the ' + ${topic.title} + ' exam.'
+                : 'Keep studying and give it another try — you\'ve got this!'">Sub</div>
+
+        <!-- Actions -->
+        <div class="result-actions">
+            <a th:href="@{/topic/{id}/exam(id=${topic.id})}"
+               class="result-btn-primary">Try Again →</a>
+            <a th:href="@{/topic/{id}(id=${topic.id})}"
+               class="result-btn-secondary">Back to Topic</a>
+        </div>
+    </div>
+
+    <!-- ── Section title ──────────────────────────────────────── -->
+    <div style="font-family:'JetBrains Mono',monospace; font-size:0.65rem; font-weight:700;
+                letter-spacing:0.15em; text-transform:uppercase; color:#4a4a65;
+                margin-bottom:1rem; padding-bottom:0.6rem;
+                border-bottom:1px solid rgba(255,255,255,0.05);">
+        Question Breakdown
+    </div>
+
+    <!-- ── Per-question result rows ───────────────────────────── -->
+    <div class="result-list">
+        <div th:each="row, iter : ${resultRows}"
+             class="result-item"
+             th:classappend="${row.correct} ? ' result-item-correct' : ' result-item-wrong'">
+
+            <div class="result-item-header">
+                <span class="result-item-icon"
+                      th:text="${row.correct} ? '✅' : '❌'">?</span>
+                <span class="result-item-q"
+                      th:text="'Q' + (${iter.index + 1}) + ': ' + ${row.question.text}">Question</span>
+            </div>
+
+            <div class="result-answer-row">
+                <!-- User's answer -->
+                <span class="result-answer-chip"
+                      th:classappend="${row.correct} ? ' chip-user-correct' : ' chip-user-wrong'"
+                      th:text="'Your answer: ' + ${row.userLabel}">Your answer</span>
+
+                <!-- Correct answer (only show when wrong) -->
+                <span th:if="${!row.correct}"
+                      class="result-answer-chip chip-correct-answer"
+                      th:text="'Correct: ' + ${row.correctLabel}">Correct answer</span>
+            </div>
+
+            <!-- Explanation (if available) -->
+            <div th:if="${row.question.explanation != null and !#strings.isEmpty(row.question.explanation)}"
+                 class="result-explanation"
+                 th:text="${row.question.explanation}">Explanation</div>
+        </div>
+    </div>
+
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

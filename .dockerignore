@@ -1,0 +1,16 @@
+# flyctl launch added from .gitignore
+**/target
+**/*.class
+**/*.jar
+**/*.war
+**/*.log
+
+# IDE
+**/.idea
+**/*.iml
+**/.vscode
+**/*.DS_Store
+
+# Spring Boot local overrides (keep these local only)
+**/src/main/resources/application-local.properties
+fly.toml

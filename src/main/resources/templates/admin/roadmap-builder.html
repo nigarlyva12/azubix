@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Builder — ' + ${roadmap.title}">Roadmap Builder</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/roadmap.css}">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
+    <!-- CSRF for AJAX -->
+    <meta name="_csrf"        th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:content="${_csrf.headerName}">
+</head>
+<body style="overflow:hidden;">
+
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<!-- ── Top bar ──────────────────────────────────────────────── -->
+<div class="rmb-topbar">
+    <a th:href="@{/admin/roadmaps}"
+       style="font-size:0.78rem;color:#5a5a7a;text-decoration:none;margin-right:0.25rem;">← Roadmaps</a>
+    <span style="color:#35355a;">·</span>
+    <span class="rmb-topbar-title" th:text="${roadmap.title}">Title</span>
+    <span class="rmb-topbar-status" th:text="${roadmap.published} ? '● Published' : '○ Draft'">Draft</span>
+    <span class="rmb-save-indicator" id="saveIndicator">✓ Saved</span>
+    <div style="margin-left:auto;display:flex;gap:0.5rem;">
+        <form th:if="${!roadmap.published}"
+              th:action="@{/admin/roadmaps/{id}/publish(id=${roadmap.id})}" method="post" style="display:inline;">
+            <button type="submit"
+                    style="padding:0.38rem 1rem;border-radius:8px;border:1px solid rgba(45,212,191,0.3);background:rgba(45,212,191,0.1);color:#2dd4bf;font-size:0.78rem;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;">
+                Publish
+            </button>
+        </form>
+        <a th:href="@{/roadmaps/{id}(id=${roadmap.id})}" target="_blank"
+           style="padding:0.38rem 0.85rem;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:#7a7a9a;font-size:0.78rem;font-weight:600;text-decoration:none;">
+            Preview ↗
+        </a>
+    </div>
+</div>
+
+<!-- ── Main layout ───────────────────────────────────────────── -->
+<div class="rmb-wrap">
+
+    <!-- Left sidebar -->
+    <div class="rmb-sidebar">
+
+        <!-- Mode tabs -->
+        <div class="rmb-modes">
+            <button class="rmb-mode-btn active" id="modeSelect" onclick="setMode('select')">Select</button>
+            <button class="rmb-mode-btn" id="modeConnect" onclick="setMode('connect')">Connect</button>
+            <button class="rmb-mode-btn" id="modePan" onclick="setMode('pan')">Pan</button>
+        </div>
+
+        <!-- Sidebar tabs: Add Node / Edit Node -->
+        <div style="display:flex;border-bottom:1px solid rgba(255,255,255,0.04);">
+            <button class="rmb-mode-btn" id="tabAdd"  onclick="showTab('add')"  style="border-radius:0;border:none;border-bottom:2px solid #7c6cf0;">＋ Node</button>
+            <button class="rmb-mode-btn" id="tabEdit" onclick="showTab('edit')" style="border-radius:0;border:none;border-bottom:2px solid transparent;">✎ Edit</button>
+        </div>
+
+        <!-- ADD NODE PANEL -->
+        <div class="rmb-sidebar-body" id="panelAdd">
+            <div class="rmb-section-label" style="margin-top:0.25rem;">New Node</div>
+
+            <div class="rmb-field">
+                <label class="rmb-label">Title *</label>
+                <input type="text" class="rmb-input" id="newTitle" placeholder="e.g. OSI Model">
+            </div>
+            <div class="rmb-field">
+                <label class="rmb-label">Description</label>
+                <textarea class="rmb-textarea" id="newDesc" placeholder="Brief description…"></textarea>
+            </div>
+            <div class="rmb-field">
+                <label class="rmb-label">Phase / Section</label>
+                <input type="text" class="rmb-input" id="newPhase" placeholder="e.g. Foundations">
+            </div>
+            <div class="rmb-field">
+                <label class="rmb-label">Difficulty</label>
+                <select class="rmb-select" id="newDifficulty">
+                    <option th:each="d : ${difficulties}" th:value="${d.name()}" th:text="${d.label}">Diff</option>
+                </select>
+            </div>
+            <div class="rmb-field">
+                <label class="rmb-label">Priority</label>
+                <select class="rmb-select" id="newPriority">
+                    <option th:each="p : ${priorities}" th:value="${p.name()}" th:text="${p.name()}">P</option>
+                </select>
+            </div>
+            <div class="rmb-field">
+                <label class="rmb-label">Est. minutes</label>
+                <input type="number" class="rmb-input" id="newMins" value="60" min="5">
+            </div>
+
+            <hr class="rmb-divider">
+            <button class="rmb-btn rmb-btn-primary" onclick="addNode()">＋ Add to Canvas</button>
+            <div style="margin-top:0.5rem;font-size:0.7rem;color:#35355a;text-align:center;">
+                Or double-click empty canvas to add at that position
+            </div>
+        </div>
+
+        <!-- EDIT NODE PANEL -->
+        <div class="rmb-sidebar-body" id="panelEdit" style="display:none;">
+            <div id="editNoSelection" style="color:#4a4a65;font-size:0.8rem;text-align:center;padding:2rem 0;">
+                Click a node to edit it
+            </div>
+            <div id="editForm" style="display:none;">
+                <div class="rmb-section-label">Edit Node</div>
+                <div class="rmb-field">
+                    <label class="rmb-label">Title</label>
+                    <input type="text" class="rmb-input" id="editTitle">
+                </div>
+                <div class="rmb-field">
+                    <label class="rmb-label">Description</label>
+                    <textarea class="rmb-textarea" id="editDesc"></textarea>
+                </div>
+                <div class="rmb-field">
+                    <label class="rmb-label">Phase</label>
+                    <input type="text" class="rmb-input" id="editPhase">
+                </div>
+                <div class="rmb-field">
+                    <label class="rmb-label">Difficulty</label>
+                    <select class="rmb-select" id="editDifficulty">
+                        <option th:each="d : ${difficulties}" th:value="${d.name()}" th:text="${d.label}">Diff</option>
+                    </select>
+                </div>
+                <div class="rmb-field">
+                    <label class="rmb-label">Priority</label>
+                    <select class="rmb-select" id="editPriority">
+                        <option th:each="p : ${priorities}" th:value="${p.name()}" th:text="${p.name()}">P</option>
+                    </select>
+                </div>
+                <div class="rmb-field">
+                    <label class="rmb-label">Est. minutes</label>
+                    <input type="number" class="rmb-input" id="editMins" min="5">
+                </div>
+                <div class="rmb-field">
+                    <label class="rmb-label">Locked</label>
+                    <select class="rmb-select" id="editLocked">
+                        <option value="false">No</option>
+                        <option value="true">Yes</option>
+                    </select>
+                </div>
+                <button class="rmb-btn rmb-btn-primary" onclick="saveNodeEdit()" style="margin-bottom:0.4rem;">✓ Save Changes</button>
+                <button class="rmb-btn rmb-btn-danger" onclick="deleteSelectedNode()">✕ Delete Node</button>
+
+                <hr class="rmb-divider">
+
+                <!-- Resources -->
+                <div class="rmb-section-label">Resources</div>
+                <div id="resourceList"></div>
+                <div style="margin-top:0.5rem;">
+                    <div class="rmb-field">
+                        <label class="rmb-label">Title</label>
+                        <input type="text" class="rmb-input" id="resTitle" placeholder="Resource title">
+                    </div>
+                    <div class="rmb-field">
+                        <label class="rmb-label">URL</label>
+                        <input type="url" class="rmb-input" id="resUrl" placeholder="https://…">
+                    </div>
+                    <div class="rmb-field">
+                        <label class="rmb-label">Type</label>
+                        <select class="rmb-select" id="resType">
+                            <option th:each="rt : ${resourceTypes}" th:value="${rt.name()}" th:text="${rt.label}">Type</option>
+                        </select>
+                    </div>
+                    <div class="rmb-field">
+                        <label class="rmb-label">Minutes (optional)</label>
+                        <input type="number" class="rmb-input" id="resMins" placeholder="e.g. 15">
+                    </div>
+                    <button class="rmb-btn rmb-btn-ghost" onclick="addResource()">＋ Add Resource</button>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /sidebar -->
+
+    <!-- Canvas -->
+    <div class="rmb-canvas-wrap mode-select" id="canvasWrap">
+        <svg id="mainSvg" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L8,3 z" fill="rgba(124,108,240,0.7)"/>
+                </marker>
+                <marker id="arrowHover" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L8,3 z" fill="#a78bfa"/>
+                </marker>
+            </defs>
+            <g id="viewport">
+                <g id="edgesGroup"></g>
+                <g id="nodesGroup"></g>
+                <!-- Temporary connection line while connecting -->
+                <line id="connectLine" x1="0" y1="0" x2="0" y2="0"
+                      stroke="rgba(167,139,250,0.6)" stroke-width="2"
+                      stroke-dasharray="6,3" display="none"/>
+            </g>
+        </svg>
+
+        <!-- Hint overlay when empty -->
+        <div id="emptyHint" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;color:#35355a;">
+            <div style="font-size:3rem;margin-bottom:0.75rem;opacity:0.3;">🗺️</div>
+            <div style="font-size:0.85rem;font-weight:600;margin-bottom:0.3rem;">Canvas is empty</div>
+            <div style="font-size:0.75rem;">Add a node from the left panel, or double-click here</div>
+        </div>
+    </div>
+
+</div><!-- /rmb-wrap -->
+
+<!-- Inline data -->
+<script th:inline="javascript">
+/*<![CDATA[*/
+const GRAPH       = /*[(${graphJson})]*/ {"nodes":[],"edges":[]};
+const ROADMAP_ID  = /*[[${roadmap.id}]]*/ 0;
+/*]]>*/
+</script>
+
+<script>
+const NODE_W = 180, NODE_H = 60;
+
+// State
+let vpX = 60, vpY = 60, vpScale = 1;
+let mode = 'select'; // select | connect | pan
+let selectedNodeId = null;
+let connectFromId = null;
+let isDragging = false, dragNodeId = null;
+let dragOffX = 0, dragOffY = 0;
+let isPanning = false, panSX = 0, panSY = 0, vpSX = 0, vpSY = 0;
+
+const canvasWrap = document.getElementById('canvasWrap');
+const svg        = document.getElementById('mainSvg');
+const viewport   = document.getElementById('viewport');
+const edgesGroup = document.getElementById('edgesGroup');
+const nodesGroup = document.getElementById('nodesGroup');
+const connectLine= document.getElementById('connectLine');
+
+// ══════════════════════════════════════════════════════════════════
+// VIEWPORT
+// ══════════════════════════════════════════════════════════════════
+function applyVP() {
+    viewport.setAttribute('transform', `translate(${vpX},${vpY}) scale(${vpScale})`);
+}
+function zoom(f) {
+    const r = canvasWrap.getBoundingClientRect();
+    const cx = r.width/2, cy = r.height/2;
+    vpX = cx + (vpX-cx)*f; vpY = cy + (vpY-cy)*f;
+    vpScale = Math.min(Math.max(vpScale*f, 0.15), 3);
+    applyVP();
+}
+function fitView() {
+    if (!GRAPH.nodes.length) return;
+    const r = canvasWrap.getBoundingClientRect();
+    let mx=Infinity, my=Infinity, Mx=-Infinity, My=-Infinity;
+    GRAPH.nodes.forEach(n => { mx=Math.min(mx,n.posX); my=Math.min(my,n.posY); Mx=Math.max(Mx,n.posX+NODE_W); My=Math.max(My,n.posY+NODE_H); });
+    const pad=80;
+    vpScale = Math.min((r.width-pad*2)/(Mx-mx||1), (r.height-pad*2)/(My-my||1), 1.2);
+    vpX = (r.width  - (Mx+mx)*vpScale) / 2;
+    vpY = (r.height - (My+my)*vpScale) / 2;
+    applyVP();
+}
+
+// Mouse → canvas coordinates
+function svgCoords(e) {
+    const r = canvasWrap.getBoundingClientRect();
+    return {
+        x: (e.clientX - r.left - vpX) / vpScale,
+        y: (e.clientY - r.top  - vpY) / vpScale
+    };
+}
+
+// ══════════════════════════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════════════════════════
+function render() {
+    edgesGroup.innerHTML = '';
+    nodesGroup.innerHTML = '';
+
+    document.getElementById('emptyHint').style.display =
+        GRAPH.nodes.length ? 'none' : 'flex';
+
+    // Edges
+    GRAPH.edges.forEach(e => {
+        const fn = GRAPH.nodes.find(n => n.id === e.from);
+        const tn = GRAPH.nodes.find(n => n.id === e.to);
+        if (!fn || !tn) return;
+        drawEdge(fn, tn, false);
+    });
+
+    // Nodes
+    GRAPH.nodes.forEach(n => drawNode(n));
+}
+
+function drawEdge(fn, tn, temp) {
+    const x1=fn.posX+NODE_W/2, y1=fn.posY+NODE_H;
+    const x2=tn.posX+NODE_W/2, y2=tn.posY;
+    const cy=(y1+y2)/2;
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d', `M${x1},${y1} C${x1},${cy} ${x2},${cy} ${x2},${y2}`);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', 'rgba(124,108,240,0.5)');
+    path.setAttribute('stroke-width', '1.8');
+    path.setAttribute('marker-end', 'url(#arrow)');
+    // Right-click to remove
+    path.addEventListener('contextmenu', ev => {
+        ev.preventDefault();
+        apiRemoveEdge(fn.id, tn.id);
+    });
+    edgesGroup.appendChild(path);
+}
+
+function drawNode(node) {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('transform', `translate(${node.posX},${node.posY})`);
+    g.setAttribute('data-id', node.id);
+    const selected = node.id === selectedNodeId;
+
+    // Shadow
+    const sh = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    sh.setAttribute('x','3'); sh.setAttribute('y','5');
+    sh.setAttribute('width',NODE_W); sh.setAttribute('height',NODE_H);
+    sh.setAttribute('rx','12'); sh.setAttribute('fill','rgba(0,0,0,0.4)');
+    g.appendChild(sh);
+
+    // Body
+    const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    rect.setAttribute('width',NODE_W); rect.setAttribute('height',NODE_H);
+    rect.setAttribute('rx','12');
+    rect.setAttribute('fill', selected ? 'rgba(124,108,240,0.15)' : 'rgba(16,16,32,0.95)');
+    rect.setAttribute('stroke', selected ? '#a78bfa' : node.color);
+    rect.setAttribute('stroke-width', selected ? '2.5' : '1.5');
+    g.appendChild(rect);
+
+    // Color bar
+    const bar = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    bar.setAttribute('width','32'); bar.setAttribute('height','3');
+    bar.setAttribute('x','12'); bar.setAttribute('y','0');
+    bar.setAttribute('rx','1.5'); bar.setAttribute('fill', node.color); bar.setAttribute('opacity','0.9');
+    g.appendChild(bar);
+
+    // Title
+    const title = document.createElementNS('http://www.w3.org/2000/svg','text');
+    title.setAttribute('x','12'); title.setAttribute('y','24');
+    title.setAttribute('font-family','DM Sans,sans-serif'); title.setAttribute('font-size','13');
+    title.setAttribute('font-weight','600'); title.setAttribute('fill','#e8e8f8');
+    title.textContent = node.title.length > 20 ? node.title.substring(0,19)+'…' : node.title;
+    g.appendChild(title);
+
+    // Meta
+    const meta = document.createElementNS('http://www.w3.org/2000/svg','text');
+    meta.setAttribute('x','12'); meta.setAttribute('y','40');
+    meta.setAttribute('font-family','JetBrains Mono,monospace'); meta.setAttribute('font-size','9');
+    meta.setAttribute('fill','#5a5a7a');
+    meta.textContent = `${node.difficultyLabel}  ·  ${node.estimatedMinutes || 60}m`;
+    g.appendChild(meta);
+
+    // Drag handle indicator
+    if (selected) {
+        const handle = document.createElementNS('http://www.w3.org/2000/svg','text');
+        handle.setAttribute('x', NODE_W-16); handle.setAttribute('y', 14);
+        handle.setAttribute('fill','#a78bfa'); handle.setAttribute('font-size','12');
+        handle.textContent = '⊕';
+        g.appendChild(handle);
+    }
+
+    // Connect-mode dot
+    if (mode === 'connect') {
+        const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
+        dot.setAttribute('cx', NODE_W/2); dot.setAttribute('cy', NODE_H);
+        dot.setAttribute('r','5'); dot.setAttribute('fill','#7c6cf0');
+        dot.setAttribute('stroke','#0a0a16'); dot.setAttribute('stroke-width','2');
+        g.appendChild(dot);
+    }
+
+    // Event handlers
+    g.addEventListener('mousedown', ev => onNodeMouseDown(ev, node.id));
+    g.addEventListener('click',     ev => onNodeClick(ev, node.id));
+
+    nodesGroup.appendChild(g);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// NODE INTERACTION
+// ══════════════════════════════════════════════════════════════════
+function onNodeMouseDown(ev, nodeId) {
+    ev.stopPropagation();
+    if (mode !== 'select') return;
+    isDragging = true; dragNodeId = nodeId;
+    const node = GRAPH.nodes.find(n => n.id === nodeId);
+    const coords = svgCoords(ev);
+    dragOffX = coords.x - node.posX;
+    dragOffY = coords.y - node.posY;
+}
+
+function onNodeClick(ev, nodeId) {
+    ev.stopPropagation();
+    if (mode === 'connect') {
+        if (!connectFromId) {
+            connectFromId = nodeId;
+            canvasWrap.style.cursor = 'crosshair';
+            // Highlight source
+            highlightConnectFrom(nodeId);
+        } else if (connectFromId !== nodeId) {
+            apiAddEdge(connectFromId, nodeId);
+            connectFromId = null;
+            canvasWrap.style.cursor = '';
+            connectLine.setAttribute('display', 'none');
+            render();
+        }
+        return;
+    }
+    if (mode === 'select') {
+        selectNode(nodeId);
+    }
+}
+
+function highlightConnectFrom(id) {
+    const g = nodesGroup.querySelector(`[data-id="${id}"]`);
+    if (g) {
+        const rect = g.querySelector('rect:nth-child(2)');
+        if (rect) rect.setAttribute('stroke', '#2dd4bf');
+    }
+}
+
+function selectNode(nodeId) {
+    selectedNodeId = nodeId;
+    const node = GRAPH.nodes.find(n => n.id === nodeId);
+    if (!node) return;
+    render();
+    showTab('edit');
+    populateEditForm(node);
+}
+
+function populateEditForm(node) {
+    document.getElementById('editNoSelection').style.display = 'none';
+    document.getElementById('editForm').style.display = '';
+    document.getElementById('editTitle').value = node.title || '';
+    document.getElementById('editDesc').value  = node.description || '';
+    document.getElementById('editPhase').value = node.phase || '';
+    document.getElementById('editMins').value  = node.estimatedMinutes || 60;
+    const diffSel = document.getElementById('editDifficulty');
+    const priSel  = document.getElementById('editPriority');
+    if (diffSel) for (let o of diffSel.options) o.selected = o.value === node.difficulty;
+    if (priSel)  for (let o of priSel.options)  o.selected = o.value === node.priority;
+    loadResourceList(node.id);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// MOUSE EVENTS ON CANVAS
+// ══════════════════════════════════════════════════════════════════
+canvasWrap.addEventListener('mousedown', function(ev) {
+    if (ev.target !== svg && !ev.target.closest('#edgesGroup') &&
+        ev.target !== viewport && ev.target.tagName !== 'svg') return;
+
+    if (mode === 'pan') {
+        isPanning = true; panSX = ev.clientX; panSY = ev.clientY;
+        vpSX = vpX; vpSY = vpY; canvasWrap.classList.add('grabbing');
+    } else if (mode === 'select') {
+        selectedNodeId = null; render();
+        document.getElementById('editNoSelection').style.display = '';
+        document.getElementById('editForm').style.display = 'none';
+    }
+});
+
+canvasWrap.addEventListener('dblclick', function(ev) {
+    if (mode !== 'select') return;
+    const coords = svgCoords(ev);
+    document.getElementById('newTitle').focus();
+    // Pre-position the new node at click location
+    canvasWrap._dblX = coords.x - NODE_W/2;
+    canvasWrap._dblY = coords.y - NODE_H/2;
+    showTab('add');
+    document.getElementById('newTitle').focus();
+});
+
+window.addEventListener('mousemove', function(ev) {
+    if (isPanning) {
+        vpX = vpSX + (ev.clientX - panSX); vpY = vpSY + (ev.clientY - panSY);
+        applyVP();
+    }
+    if (isDragging && dragNodeId) {
+        const coords = svgCoords(ev);
+        const node = GRAPH.nodes.find(n => n.id === dragNodeId);
+        if (node) { node.posX = coords.x - dragOffX; node.posY = coords.y - dragOffY; }
+        render();
+    }
+    if (mode === 'connect' && connectFromId) {
+        const coords = svgCoords(ev);
+        const fn = GRAPH.nodes.find(n => n.id === connectFromId);
+        if (fn) {
+            connectLine.setAttribute('display', '');
+            connectLine.setAttribute('x1', fn.posX+NODE_W/2); connectLine.setAttribute('y1', fn.posY+NODE_H/2);
+            connectLine.setAttribute('x2', coords.x); connectLine.setAttribute('y2', coords.y);
+        }
+    }
+});
+
+window.addEventListener('mouseup', function(ev) {
+    if (isDragging && dragNodeId) {
+        const node = GRAPH.nodes.find(n => n.id === dragNodeId);
+        if (node) apiSavePosition(dragNodeId, node.posX, node.posY);
+    }
+    isDragging = false; dragNodeId = null;
+    isPanning  = false; canvasWrap.classList.remove('grabbing');
+});
+
+canvasWrap.addEventListener('wheel', function(ev) {
+    ev.preventDefault();
+    const f = ev.deltaY < 0 ? 1.1 : 0.9;
+    const r = canvasWrap.getBoundingClientRect();
+    const mx = ev.clientX-r.left, my = ev.clientY-r.top;
+    vpX = mx + (vpX-mx)*f; vpY = my + (vpY-my)*f;
+    vpScale = Math.min(Math.max(vpScale*f, 0.15), 3);
+    applyVP();
+}, { passive: false });
+
+// ══════════════════════════════════════════════════════════════════
+// MODE SWITCHING
+// ══════════════════════════════════════════════════════════════════
+function setMode(m) {
+    mode = m;
+    connectFromId = null;
+    connectLine.setAttribute('display','none');
+    ['select','connect','pan'].forEach(x => {
+        document.getElementById('mode'+x.charAt(0).toUpperCase()+x.slice(1))
+                .classList.toggle('active', x === m);
+    });
+    canvasWrap.className = 'rmb-canvas-wrap' + (m === 'pan' ? ' mode-pan' : m === 'connect' ? ' mode-connect' : ' mode-select');
+    render();
+}
+
+function showTab(t) {
+    document.getElementById('panelAdd').style.display  = t === 'add'  ? '' : 'none';
+    document.getElementById('panelEdit').style.display = t === 'edit' ? '' : 'none';
+    document.getElementById('tabAdd').style.borderBottomColor  = t === 'add'  ? '#7c6cf0' : 'transparent';
+    document.getElementById('tabEdit').style.borderBottomColor = t === 'edit' ? '#7c6cf0' : 'transparent';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// API CALLS
+// ══════════════════════════════════════════════════════════════════
+function showSaved() {
+    const el = document.getElementById('saveIndicator');
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+function getCsrf() {
+    return document.querySelector('meta[name="_csrf"]')?.getAttribute('content') || '';
+}
+function getCsrfHeader() {
+    return document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content') || 'X-CSRF-TOKEN';
+}
+
+function apiPost(url, body) {
+    return fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            [getCsrfHeader()]: getCsrf()
+        },
+        body: JSON.stringify(body)
+    }).then(r => {
+        if (!r.ok) throw new Error('Request failed: ' + r.status);
+        return r.json();
+    });
+}
+
+function addNode() {
+    const title = document.getElementById('newTitle').value.trim();
+    if (!title) { document.getElementById('newTitle').focus(); return; }
+    const posX = canvasWrap._dblX ?? ((-vpX/vpScale) + 200 + GRAPH.nodes.length * 20);
+    const posY = canvasWrap._dblY ?? ((-vpY/vpScale) + 100 + GRAPH.nodes.length * 20);
+    canvasWrap._dblX = canvasWrap._dblY = null;
+
+    apiPost(`/admin/roadmaps/${ROADMAP_ID}/nodes/create`, {
+        title,
+        description: document.getElementById('newDesc').value,
+        phase:       document.getElementById('newPhase').value,
+        difficulty:  document.getElementById('newDifficulty').value,
+        priority:    document.getElementById('newPriority').value,
+        estimatedMinutes: parseInt(document.getElementById('newMins').value) || 60,
+        posX, posY
+    }).then(node => {
+        GRAPH.nodes.push(node);
+        render();
+        showSaved();
+        // Clear form
+        ['newTitle','newDesc','newPhase'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('newMins').value = '60';
+    }).catch(err => {
+        alert('Could not add node: ' + err.message);
+    });
+}
+
+function saveNodeEdit() {
+    if (!selectedNodeId) return;
+    apiPost(`/admin/roadmaps/${ROADMAP_ID}/nodes/${selectedNodeId}/update`, {
+        title:       document.getElementById('editTitle').value,
+        description: document.getElementById('editDesc').value,
+        phase:       document.getElementById('editPhase').value,
+        difficulty:  document.getElementById('editDifficulty').value,
+        priority:    document.getElementById('editPriority').value,
+        estimatedMinutes: parseInt(document.getElementById('editMins').value) || 60,
+        locked:      document.getElementById('editLocked').value === 'true'
+    }).then(updated => {
+        const idx = GRAPH.nodes.findIndex(n => n.id === selectedNodeId);
+        if (idx >= 0) {
+            // Preserve position
+            updated.posX = GRAPH.nodes[idx].posX;
+            updated.posY = GRAPH.nodes[idx].posY;
+            GRAPH.nodes[idx] = updated;
+        }
+        render();
+        showSaved();
+    });
+}
+
+function deleteSelectedNode() {
+    if (!selectedNodeId) return;
+    if (!confirm('Delete this node?')) return;
+    apiPost(`/admin/roadmaps/${ROADMAP_ID}/nodes/${selectedNodeId}/delete`, {})
+    .then(() => {
+        GRAPH.nodes = GRAPH.nodes.filter(n => n.id !== selectedNodeId);
+        GRAPH.edges = GRAPH.edges.filter(e => e.from !== selectedNodeId && e.to !== selectedNodeId);
+        selectedNodeId = null;
+        render();
+        showTab('add');
+        showSaved();
+    });
+}
+
+function apiSavePosition(nodeId, x, y) {
+    apiPost(`/admin/roadmaps/${ROADMAP_ID}/nodes/${nodeId}/position`, { x, y })
+    .then(() => showSaved());
+}
+
+function apiAddEdge(from, to) {
+    apiPost(`/admin/roadmaps/${ROADMAP_ID}/edges/add`, { from, to })
+    .then(() => {
+        if (!GRAPH.edges.find(e => e.from===from && e.to===to))
+            GRAPH.edges.push({ from, to });
+        render(); showSaved();
+    });
+}
+
+function apiRemoveEdge(from, to) {
+    if (!confirm('Remove this connection?')) return;
+    apiPost(`/admin/roadmaps/${ROADMAP_ID}/edges/remove`, { from, to })
+    .then(() => {
+        GRAPH.edges = GRAPH.edges.filter(e => !(e.from===from && e.to===to));
+        render(); showSaved();
+    });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// RESOURCES
+// ══════════════════════════════════════════════════════════════════
+function loadResourceList(nodeId) {
+    fetch(`/roadmaps/${ROADMAP_ID}/node/${nodeId}/resources`)
+    .then(r => r.json())
+    .then(data => {
+        const el = document.getElementById('resourceList');
+        el.innerHTML = '';
+        (data.resources || []).forEach(res => {
+            const div = document.createElement('div');
+            div.className = 'rmb-resource-item';
+            div.innerHTML = `
+                <span style="color:${res.typeColor};font-size:0.8rem;">${res.typeIcon}</span>
+                <span class="rmb-resource-title">${res.title}</span>
+                <button class="rmb-resource-del" onclick="deleteResource(${res.id})">✕</button>
+            `;
+            el.appendChild(div);
+        });
+    });
+}
+
+function addResource() {
+    if (!selectedNodeId) return;
+    const title = document.getElementById('resTitle').value.trim();
+    const url   = document.getElementById('resUrl').value.trim();
+    if (!title) return;
+    apiPost(`/admin/roadmaps/${ROADMAP_ID}/nodes/${selectedNodeId}/resources/add`, {
+        title, url,
+        resourceType: document.getElementById('resType').value,
+        estimatedMinutes: parseInt(document.getElementById('resMins').value) || null
+    }).then(() => {
+        ['resTitle','resUrl','resMins'].forEach(id => document.getElementById(id).value='');
+        loadResourceList(selectedNodeId);
+        showSaved();
+    });
+}
+
+function deleteResource(resId) {
+    if (!confirm('Delete this resource?')) return;
+    apiPost(`/admin/roadmaps/${ROADMAP_ID}/nodes/${selectedNodeId}/resources/${resId}/delete`, {})
+    .then(() => { loadResourceList(selectedNodeId); showSaved(); });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════════
+render();
+if (GRAPH.nodes.length > 0) { setTimeout(fitView, 50); } else { applyVP(); }
+</script>
+
+</body>
+</html>

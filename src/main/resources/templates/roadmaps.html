@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roadmaps — Azubix</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/roadmap.css}">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="rm-page">
+
+    <!-- Hero -->
+    <div class="rm-hero">
+        <div class="rm-hero-eyebrow">
+            <span style="width:5px;height:5px;border-radius:50%;background:#7c6cf0;display:inline-block;"></span>
+            Learning Roadmaps
+        </div>
+        <h1>Choose Your Study Path</h1>
+        <p>Structured preparation plans built by experts. Pick the intensity that fits your timeline.</p>
+    </div>
+
+    <!-- Empty state -->
+    <div th:if="${byExam == null or byExam.isEmpty()}"
+         style="text-align:center;padding:5rem 2rem;color:#4a4a65;font-size:0.9rem;">
+        <div style="font-size:3rem;margin-bottom:1rem;opacity:0.4;">🗺️</div>
+        <p>No roadmaps published yet. Check back soon!</p>
+    </div>
+
+    <!-- Exam groups -->
+    <div th:each="entry : ${byExam}" class="rm-exam-group">
+
+        <div class="rm-exam-title">
+            🎯 <span th:text="${entry.key}">Exam</span>
+            <span th:text="${#lists.size(entry.value)} + ' plan(s)'">0 plans</span>
+        </div>
+
+        <div class="rm-cards">
+            <a th:each="rm : ${entry.value}"
+               th:href="@{/roadmaps/{id}(id=${rm.id})}"
+               th:classappend="${rm.planType.name() == 'SAFE_6M'} ? ' rm-type-safe' :
+                               (${rm.planType.name() == 'FAST_3M'} ? ' rm-type-fast' : ' rm-type-crazy')"
+               class="rm-card">
+
+                <!-- Plan badge -->
+                <div class="rm-card-plan"
+                     th:classappend="${rm.planType.name() == 'SAFE_6M'} ? ' rm-plan-safe' :
+                                     (${rm.planType.name() == 'FAST_3M'} ? ' rm-plan-fast' : ' rm-plan-crazy')">
+                    <span th:text="${rm.planType.label}">Plan</span>
+                    ·
+                    <span th:text="${rm.planType.duration}">Duration</span>
+                </div>
+
+                <div class="rm-card-title" th:text="${rm.title}">Title</div>
+                <div class="rm-card-tagline"
+                     th:text="${rm.description != null and !#strings.isEmpty(rm.description)} ? ${rm.description} : ${rm.planType.tagline}">
+                    Description
+                </div>
+
+                <div class="rm-card-meta">
+                    <span th:if="${rm.estimatedHours != null}"
+                          th:text="${rm.estimatedHours} + 'h total'">0h</span>
+                    <span th:text="${#lists.size(rm.nodes)} + ' nodes'">0 nodes</span>
+                    <span class="rm-card-arrow">›</span>
+                </div>
+            </a>
+        </div>
+    </div>
+
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${topic.title} + ' — Azubix'">Topic — Azubix</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/topics.css}">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<!-- ══════════════════════════════════════════════════════════
+     HERO BANNER
+     ══════════════════════════════════════════════════════════ -->
+<div class="tp-banner">
+    <div class="tp-banner-inner">
+
+        <!-- Breadcrumb -->
+        <nav class="tp-breadcrumb">
+            <a th:href="@{/}" th:text="#{nav.home}">Home</a>
+            <span class="tp-breadcrumb-sep">›</span>
+            <a th:href="@{/categories}" th:text="#{nav.courses}">Courses</a>
+            <span class="tp-breadcrumb-sep">›</span>
+            <a th:href="@{/category/{id}(id=${topic.category.id})}"
+               th:text="${topic.category.name}">Category</a>
+            <span class="tp-breadcrumb-sep">›</span>
+            <span th:text="${topic.title}">Topic</span>
+        </nav>
+
+        <div class="tp-banner-top">
+            <div class="tp-banner-left">
+
+                <!-- Eyebrow tag — shows parent category -->
+                <div class="tp-banner-tag">
+                    <span class="tag-dot"></span>
+                    <span th:text="${topic.category.name}">Category</span>
+                </div>
+
+                <h1 th:text="${topic.title}">Topic Title</h1>
+
+                <p class="tp-banner-desc"
+                   th:if="${topic.description != null and not #strings.isEmpty(topic.description)}"
+                   th:text="${topic.description}">
+                    Topic description goes here.
+                </p>
+
+                <!-- Stats pill -->
+                <div class="tp-banner-stats">
+                    <div class="tp-stat">
+                        <span class="tp-stat-icon">📄</span>
+                        <span class="tp-stat-text">
+                            <span class="tp-stat-num" th:text="${#lists.size(articles)}">0</span>
+                            Articles
+                        </span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Mark complete button — authenticated users only -->
+            <div sec:authorize="isAuthenticated()">
+                <form th:action="@{/progress/toggle/{id}(id=${topic.id})}" method="post">
+                    <button type="submit"
+                            th:class="${isCompleted != null and isCompleted} ? 'tp-complete-btn is-complete' : 'tp-complete-btn not-complete'">
+                        <span th:text="${isCompleted != null and isCompleted} ? '✓' : '○'">○</span>
+                        <span th:text="${isCompleted != null and isCompleted} ? #{article.completed} : #{article.markComplete}">
+                            Mark Complete
+                        </span>
+                    </button>
+                </form>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     ARTICLES LIST
+     ══════════════════════════════════════════════════════════ -->
+<section class="td-section">
+    <div class="td-section-inner">
+
+        <div class="td-section-label"
+             th:text="'Articles — ' + ${#lists.size(articles)}">Articles — 0</div>
+
+        <!-- Article cards -->
+        <div class="td-list" th:if="${not #lists.isEmpty(articles)}">
+            <a th:each="article, iter : ${articles}"
+               th:href="@{/article/{id}(id=${article.id})}"
+               class="td-article">
+
+                <span class="td-article-num"
+                      th:text="${iter.index + 1 < 10 ? '0' + (iter.index + 1) : (iter.index + 1)}">01</span>
+
+                <div class="td-article-content">
+                    <div class="td-article-title"
+                         th:text="${localizedTitleMap != null ? localizedTitleMap[article.id] : article.title}">
+                        Article Title
+                    </div>
+                    <div class="td-article-meta">
+                        <span th:text="${#temporals.format(article.createdAt, 'MMM d, yyyy')}">Jan 1, 2025</span>
+                        <span class="td-article-meta-dot">·</span>
+                        <span class="td-article-time">
+                            ⏱
+                            <span th:text="${readingTimeMap != null ? readingTimeMap[article.id] : 1}">5</span>
+                            <span th:text="#{article.minRead}">min read</span>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="td-article-arrow">›</div>
+            </a>
+        </div>
+
+        <!-- Empty state -->
+        <div th:if="${#lists.isEmpty(articles)}" class="tp-empty">
+            <div class="tp-empty-card">
+                <div class="tp-empty-icon">📄</div>
+                <p>No articles in this topic yet.</p>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     PRACTICE TOOLS — Exam + Flashcards
+     ══════════════════════════════════════════════════════════ -->
+<section class="td-section td-section-tools">
+    <div class="td-section-inner">
+
+        <div class="td-section-label">Practice Tools</div>
+
+        <div class="td-tools-grid">
+
+            <!-- Exam Simulation card -->
+            <a th:href="@{/topic/{id}/exam(id=${topic.id})}" class="td-tool-card td-tool-exam">
+                <div class="td-tool-icon">🎓</div>
+                <div class="td-tool-body">
+                    <div class="td-tool-title">Exam Simulation</div>
+                    <div class="td-tool-desc">Test your knowledge with real exam-style questions covering this topic.</div>
+                </div>
+                <div class="td-tool-arrow">›</div>
+            </a>
+
+            <!-- Flashcards card -->
+            <a th:href="@{/topic/{id}/flashcards(id=${topic.id})}" class="td-tool-card td-tool-flash">
+                <div class="td-tool-icon">🃏</div>
+                <div class="td-tool-body">
+                    <div class="td-tool-title">Flashcards</div>
+                    <div class="td-tool-desc">Study with flip cards and match-the-term games to lock in the concepts.</div>
+                </div>
+                <div class="td-tool-arrow">›</div>
+            </a>
+
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<div th:replace="~{fragments/footer :: footer}"></div>
+
+</body>
+</html>

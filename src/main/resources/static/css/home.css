@@ -1,0 +1,430 @@
+@charset "UTF-8";
+
+/* ══════════════════════════════════════════════════════════════
+   BASE
+   ══════════════════════════════════════════════════════════════ */
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'DM Sans', sans-serif;
+    background: #0c0c18;
+    /* body keeps default flex-column from style.css */
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SPLIT CONTAINER
+   Navbar is 63 px (sticky). Split fills the rest of the viewport.
+   Footer sits naturally below, visible on a small scroll.
+   ══════════════════════════════════════════════════════════════ */
+.split-container {
+    display: flex;
+    height: calc(100vh - 66px);
+    min-height: 500px;
+    overflow: hidden;
+    flex-shrink: 0;   /* don't let the footer push this smaller */
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LEFT SIDE — dark hero / Three.js (60 %)
+   ══════════════════════════════════════════════════════════════ */
+.hero-side {
+    flex: 0 0 60%;
+    min-width: 0;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    background: #0c0c18;
+}
+.hero-side::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+
+.hero-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* Radial vignette so text pops above canvas */
+.hero-side::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 70% 65% at 50% 55%,
+        transparent 25%,
+        rgba(12,12,24,0.6) 100%);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 2;
+    max-width: 560px;
+    padding: 1.75rem 3rem;
+    text-align: left;
+}
+
+/* Badge */
+.hero-badge {
+    display: inline-block;
+    background: rgba(124,108,240,0.12);
+    border: 1px solid rgba(124,108,240,0.28);
+    color: #a78bfa;
+    padding: 4px 13px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+}
+
+/* Headline */
+.hero-content h1 {
+    font-size: clamp(2rem, 3.5vw, 3.2rem);
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.1;
+    margin: 0 0 0.85rem;
+    letter-spacing: -0.02em;
+}
+
+.gradient-text {
+    background: linear-gradient(135deg, #7c6cf0 0%, #2dd4bf 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Subtitle */
+.hero-sub {
+    color: #7878a0;
+    font-size: 0.95rem;
+    line-height: 1.65;
+    margin: 0 0 1.4rem;
+    max-width: 460px;
+}
+
+/* ── CTA — dominant, first thing the eye lands on ──────────── */
+.hero-actions { margin-bottom: 1.75rem; }
+
+.hero-cta {
+    display: inline-block;
+    background: linear-gradient(135deg, #7c6cf0 0%, #2dd4bf 100%);
+    color: #fff !important;
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 14px 38px;
+    border-radius: 14px;
+    text-decoration: none !important;
+    letter-spacing: 0.02em;
+    box-shadow:
+        0 8px 36px rgba(124,108,240,0.5),
+        0 0 0 1px rgba(124,108,240,0.3);
+    transition:
+        transform 0.28s cubic-bezier(0.34,1.56,0.64,1),
+        box-shadow 0.28s ease;
+    position: relative;
+    overflow: hidden;
+}
+.hero-cta::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, transparent 55%);
+    pointer-events: none;
+}
+.hero-cta:hover {
+    transform: translateY(-3px) scale(1.025);
+    box-shadow:
+        0 18px 52px rgba(124,108,240,0.65),
+        0 0 0 1px rgba(124,108,240,0.5);
+}
+
+/* ── Stats row ───────────────────────────────────────────────── */
+.hero-stats {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.hstat {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.hstat-num {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #ffffff;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1;
+}
+
+.hstat-label {
+    font-size: 0.65rem;
+    color: #707090;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    font-weight: 500;
+}
+
+.hstat-divider {
+    width: 1px;
+    height: 28px;
+    background: rgba(255,255,255,0.07);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SPLIT DIVIDER
+   ══════════════════════════════════════════════════════════════ */
+.split-divider {
+    width: 1px;
+    flex-shrink: 0;
+    background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        rgba(255,255,255,0.07) 15%,
+        rgba(255,255,255,0.07) 85%,
+        transparent 100%
+    );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RIGHT SIDE — dark editorial feed (40 %)
+   CSS gradient animation lives on the container itself so it
+   never scrolls with the content.
+   ══════════════════════════════════════════════════════════════ */
+@keyframes auroraShift {
+    0%   { background-position: 0%   50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0%   50%; }
+}
+
+.articles-side {
+    flex: 1;
+    min-width: 0; /* prevent flex child from overflowing parent */
+    position: relative;
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* Gradient lives HERE — backgrounds never scroll with content */
+    background: linear-gradient(-45deg, #0e0e1e, #14112e, #0c1828, #0e0e1e);
+    background-size: 400% 400%;
+    animation: auroraShift 18s ease infinite;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(124,108,240,0.2) transparent;
+}
+
+.articles-inner {
+    position: relative;
+    z-index: 1;
+    padding: 2.25rem 1.75rem 2rem;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* ── Editorial header ─────────────────────────────────────────── */
+.feed-header { margin-bottom: 1.6rem; }
+
+.feed-eyebrow {
+    display: block;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #686888;
+    margin-bottom: 0.55rem;
+}
+
+.feed-rule {
+    height: 1px;
+    background: linear-gradient(to right, rgba(255,255,255,0.07) 40%, transparent);
+}
+
+/* ── Article list ────────────────────────────────────────────── */
+.feed-list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.feed-item {
+    display: block;
+    text-decoration: none !important;
+    padding: 1.05rem 0.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    border-radius: 8px;
+    transition: background 0.2s ease, transform 0.2s ease;
+    opacity: 0;
+    animation: feedIn 0.45s ease forwards;
+}
+
+@keyframes feedIn {
+    from { opacity: 0; transform: translateX(16px); }
+    to   { opacity: 1; transform: translateX(0);    }
+}
+
+.feed-item:last-child { border-bottom: none; }
+
+.feed-item:hover {
+    background: rgba(124,108,240,0.07);
+    transform: translateX(5px);
+}
+
+.feed-item-top {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.3rem;
+    min-width: 0;
+}
+
+.feed-counter {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: #585878;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+}
+
+.feed-cat {
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #a78bfa;
+    background: rgba(124,108,240,0.14);
+    padding: 2px 8px;
+    border-radius: 20px;
+}
+
+.feed-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #e2e8f0;
+    margin: 0 0 0.28rem;
+    line-height: 1.45;
+    transition: color 0.2s;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    min-width: 0;
+}
+
+.feed-item:hover .feed-title { color: #a78bfa; }
+
+.feed-teaser {
+    font-size: 0.76rem;
+    color: #6a6a8a;
+    line-height: 1.55;
+    margin: 0 0 0.35rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.feed-meta {
+    font-size: 0.65rem;
+    color: #5a5a7a;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.feed-dot { color: #4a4a6a; }
+
+/* ── Empty state ──────────────────────────────────────────────── */
+.feed-empty {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 0;
+    font-size: 0.82rem;
+    color: #686888;
+    font-style: italic;
+}
+
+/* ── Browse all ──────────────────────────────────────────────── */
+.feed-browse {
+    display: inline-block;
+    margin-top: 1.4rem;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: #7c6cf0;
+    text-decoration: none !important;
+    letter-spacing: 0.02em;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+.feed-browse:hover { opacity: 1; }
+
+/* ══════════════════════════════════════════════════════════════
+   RESPONSIVE — stacked on narrow screens
+   ══════════════════════════════════════════════════════════════ */
+@media (max-width: 900px) {
+    .split-container {
+        flex-direction: column;
+        height: auto;
+        overflow: visible;
+    }
+
+    .hero-side {
+        flex: none;
+        min-height: 80vh;
+    }
+
+    .split-divider {
+        width: 100%;
+        height: 1px;
+        background: linear-gradient(to right, transparent, rgba(255,255,255,0.07), transparent);
+    }
+
+    .articles-side {
+        flex: none;
+        overflow: visible;
+        min-height: auto;
+    }
+
+    .articles-inner {
+        padding: 2rem 1.5rem;
+    }
+
+    .hero-content {
+        text-align: center;
+        padding: 2rem 1.5rem;
+    }
+
+    .hero-content h1 { font-size: 2.4rem; }
+    .hero-sub { max-width: 100%; }
+    .hero-stats { justify-content: center; }
+    .hero-badge { font-size: 0.68rem; }
+}
+
+@media (max-width: 600px) {
+    .hero-content h1 { font-size: 1.9rem; }
+    .hero-content { padding: 2rem 1.25rem; }
+    .hero-cta { font-size: 0.95rem; padding: 14px 32px; }
+    .hero-stats { gap: 1rem; }
+    .hstat-num { font-size: 1.1rem; }
+
+    .feed-title { font-size: 0.85rem; }
+    .articles-inner { padding: 1.75rem 1.25rem; }
+}
+
+@media (max-width: 400px) {
+    .hero-content h1 { font-size: 1.65rem; letter-spacing: -0.01em; }
+    .hstat-divider { display: none; }
+}

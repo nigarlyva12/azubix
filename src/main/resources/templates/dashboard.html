@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — Azubix</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+    <link rel="stylesheet" th:href="@{/css/gamification.css}">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navbar -->
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <div class="dash-page">
+
+        <!-- ==============================
+             GREETING HEADER
+             ============================== -->
+        <div class="dash-greet">
+            <!-- Avatar -->
+            <img th:if="${user.profileImage != null}"
+                 th:src="@{/uploads/{img}(img=${user.profileImage})}"
+                 alt="Profile" class="dash-avatar">
+            <img th:if="${user.profileImage == null && user.profileImageUrl != null}"
+                 th:src="${user.profileImageUrl}"
+                 alt="Profile" class="dash-avatar">
+            <div th:if="${user.profileImage == null && user.profileImageUrl == null}"
+                 class="dash-avatar-placeholder"
+                 th:text="${user.name != null ? user.name.substring(0,1).toUpperCase() : user.email.substring(0,1).toUpperCase()}">
+                U
+            </div>
+
+            <div class="dash-greet-text">
+                <h1>
+                    <span th:text="#{dash.welcome}">Welcome back,</span>
+                    <span th:text="${user.name != null && !user.name.isEmpty() ? user.name : user.email}">User</span>
+                </h1>
+                <div class="dash-greet-sub">
+                    <span th:if="${streak > 0}" class="dash-streak-badge">
+                        &#128293; <span th:text="${streak}">0</span><span th:text="#{dash.streak}">-day streak</span>
+                    </span>
+                    <span th:if="${streak == 0}" style="color: var(--gray);" th:text="#{dash.noStreak}">
+                        Start learning to build your streak!
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==============================
+             STATS ROW
+             ============================== -->
+        <div class="dash-stats">
+            <div class="dash-stat">
+                <div class="dash-stat-icon">&#9989;</div>
+                <div class="dash-stat-num" th:text="${completedTopics}">0</div>
+                <div class="dash-stat-label" th:text="#{dash.topicsDone}">Topics done</div>
+            </div>
+            <div class="dash-stat">
+                <div class="dash-stat-icon">&#128214;</div>
+                <div class="dash-stat-num" th:text="${articlesRead}">0</div>
+                <div class="dash-stat-label" th:text="#{dash.articlesRead}">Articles read</div>
+            </div>
+            <div class="dash-stat">
+                <div class="dash-stat-icon">&#128200;</div>
+                <div class="dash-stat-num"><span th:text="${overallProgress}">0</span>%</div>
+                <div class="dash-stat-label" th:text="#{progress.text}">Progress</div>
+            </div>
+            <div class="dash-stat">
+                <div class="dash-stat-icon">&#128293;</div>
+                <div class="dash-stat-num" th:text="${streak}">0</div>
+                <div class="dash-stat-label" th:text="#{dash.dayStreak}">Day streak</div>
+            </div>
+            <!-- XP stat -->
+            <div class="dash-stat dash-stat-xp">
+                <div class="dash-stat-icon">&#9889;</div>
+                <div class="dash-stat-num xp-num" th:text="${totalXp}">0</div>
+                <div class="dash-stat-label" th:text="#{dash.totalXp}">Total XP</div>
+            </div>
+        </div>
+
+        <!-- ==============================
+             PROGRESS RINGS + ACTIVITY
+             ============================== -->
+        <div class="dash-row">
+            <!-- Progress by Category -->
+            <div class="dash-card">
+                <div class="dash-card-title">
+                    <span class="card-icon">&#127919;</span> <span th:text="#{dash.progressByCategory}">Progress by category</span>
+                </div>
+
+                <div th:if="${!#maps.isEmpty(progressMap)}" class="dash-rings" id="dashRings">
+                    <!-- Rings rendered by JavaScript below -->
+                </div>
+
+                <p th:if="${#maps.isEmpty(progressMap)}"
+                   style="text-align: center; color: var(--gray); padding: 1.5rem; font-size: 0.85rem;"
+                   th:text="#{dash.noCategories}">
+                    No categories yet.
+                </p>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="dash-card">
+                <div class="dash-card-title">
+                    <span class="card-icon">&#9889;</span> <span th:text="#{dash.recentActivity}">Recent activity</span>
+                </div>
+
+                <ul th:if="${!#lists.isEmpty(recentActivity)}" class="dash-activity">
+                    <li th:each="activity : ${recentActivity}">
+                        <div th:classappend="${activity.action == 'READ'} ? 'read' : (${activity.action == 'COMPLETED'} ? 'completed' : 'started')"
+                             class="dash-act-dot"></div>
+                        <div>
+                            <span th:text="${activity.action == 'READ'} ? #{dash.act.read} : (${activity.action == 'COMPLETED'} ? #{dash.act.completed} : #{dash.act.started})">Action</span>
+                            <a th:href="${activity.targetUrl}"
+                               class="dash-act-name"
+                               th:text="${activity.targetName}">Item</a>
+                            <div class="dash-act-time"
+                                 th:text="${#temporals.format(activity.timestamp, 'MMM dd, HH:mm')}">
+                                Jan 01, 12:00
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+
+                <div th:if="${#lists.isEmpty(recentActivity)}" class="dash-activity-empty"
+                     th:text="#{dash.noActivity}">
+                    No activity yet. Start reading articles!
+                </div>
+            </div>
+        </div>
+
+        <!-- ==============================
+             CONTINUE LEARNING
+             ============================== -->
+        <div class="dash-card" style="margin-bottom: 1.25rem;">
+            <div class="dash-card-title">
+                <span class="card-icon">&#128640;</span> <span th:text="#{dash.continueLearning}">Continue learning</span>
+            </div>
+
+            <div class="dash-continue">
+                <a th:each="item : ${continueItems}"
+                   th:href="@{/category/{id}(id=${item.get('id')})}"
+                   class="dash-cont-card">
+                    <div class="dash-cont-tag" th:text="${item.get('name')}">Category</div>
+                    <div class="dash-cont-title" th:text="#{dash.continuePrefix} + ' ' + ${item.get('name')}">Continue Category</div>
+                    <div class="dash-cont-bar">
+                        <div class="dash-cont-fill"
+                             th:style="'width: ' + ${item.get('progress')} + '%'"></div>
+                    </div>
+                    <div class="dash-cont-pct">
+                        <span th:text="${item.get('progress')}">0</span>% <span th:text="#{progress.complete}">complete</span>
+                    </div>
+                </a>
+
+                <!-- If no in-progress categories, show suggestion -->
+                <div th:if="${#lists.isEmpty(continueItems)}" class="dash-continue-empty">
+                    <a th:href="@{/categories}" style="color: var(--primary); font-weight: 600;"
+                       th:text="#{dash.browseCourses}">
+                        Browse courses to get started &#8594;
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==============================
+             WEEKLY STREAK
+             ============================== -->
+        <div class="dash-card">
+            <div class="dash-card-title">
+                <span class="card-icon">&#128197;</span> <span th:text="#{dash.thisWeek}">This week</span>
+            </div>
+            <div class="dash-week">
+                <div th:each="active, iterStat : ${weekDays}"
+                     th:classappend="${active} ? 'dash-week-on' : 'dash-week-off'"
+                     class="dash-week-day"
+                     th:with="days=${ {'M','T','W','T','F','S','S'} }"
+                     th:text="${days[iterStat.index]}">
+                    M
+                </div>
+            </div>
+        </div>
+
+        <!-- ==============================
+             ACHIEVEMENTS PANEL
+             ============================== -->
+        <div class="dash-card" style="margin-bottom: 1.25rem;">
+            <div class="dash-card-title">
+                <span class="card-icon">&#127942;</span>
+                <span th:text="#{dash.achievements}">Achievements</span>
+                <span class="ach-count-badge">
+                    <span th:text="${achievementCount}">0</span> / <span th:text="${#lists.size(allAchievements)}">10</span>
+                </span>
+            </div>
+
+            <div class="ach-grid">
+                <div th:each="ach : ${allAchievements}"
+                     class="ach-badge"
+                     th:classappend="${earnedAchievementIds.contains(ach.id)} ? ' ach-unlocked' : ' ach-locked'"
+                     th:title="${ach.name + ' — ' + ach.description}">
+                    <div class="ach-icon" th:text="${ach.icon}">🏅</div>
+                    <div class="ach-name" th:text="${ach.name}">Achievement</div>
+                    <div class="ach-xp">+<span th:text="${ach.xpReward}">0</span> <span th:text="#{lb.xp}">XP</span></div>
+                </div>
+            </div>
+
+            <div th:if="${#lists.isEmpty(allAchievements)}" class="ach-empty"
+                 th:text="#{dash.noAchievements}">No achievements yet.</div>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div th:replace="~{fragments/footer :: footer}"></div>
+
+    <!-- ==============================
+         PROGRESS RINGS — JavaScript
+         ============================== -->
+    <script th:inline="javascript">
+        var progressData = /*[[${progressMap}]]*/ {};
+    </script>
+    <script>
+    (function() {
+        var container = document.getElementById('dashRings');
+        if (!container) return;
+
+        var colors = ['#7c6cf0', '#2dd4bf', '#378ADD', '#D85A30', '#22c55e', '#D4537E'];
+        var bgColors = ['#ededfc', '#ccfbf1', '#E6F1FB', '#FAECE7', '#dcfce7', '#FBEAF0'];
+
+        var keys = Object.keys(progressData);
+        keys.forEach(function(name, idx) {
+            var pct = progressData[name];
+            var color = colors[idx % colors.length];
+            var bg = bgColors[idx % bgColors.length];
+
+            var sz = 76;
+            var r = 30;
+            var circ = 2 * Math.PI * r;
+            var offset = circ - (pct / 100) * circ;
+
+            var div = document.createElement('div');
+            div.className = 'dash-ring-item';
+            div.innerHTML =
+                '<svg width="' + sz + '" height="' + sz + '" viewBox="0 0 ' + sz + ' ' + sz + '">' +
+                '<circle cx="38" cy="38" r="' + r + '" fill="none" stroke="' + bg + '" stroke-width="5"/>' +
+                '<circle cx="38" cy="38" r="' + r + '" fill="none" stroke="' + color + '" stroke-width="5" ' +
+                    'stroke-dasharray="' + circ + '" stroke-dashoffset="' + circ + '" ' +
+                    'stroke-linecap="round" transform="rotate(-90 38 38)" class="dash-ring-circle" ' +
+                    'data-target="' + offset + '"/>' +
+                '<text x="38" y="42" text-anchor="middle" font-size="14" font-weight="700" ' +
+                    'fill="' + color + '" font-family="JetBrains Mono, monospace">' + pct + '%</text>' +
+                '</svg>' +
+                '<div class="dash-ring-label">' + name + '</div>';
+
+            container.appendChild(div);
+        });
+
+        // Animate rings on load
+        setTimeout(function() {
+            document.querySelectorAll('.dash-ring-circle').forEach(function(circle) {
+                circle.style.strokeDashoffset = circle.getAttribute('data-target');
+            });
+        }, 300);
+    })();
+    </script>
+</body>
+</html>

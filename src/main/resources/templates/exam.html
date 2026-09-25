@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Exam — ' + ${topic.title} + ' — Azubix'">Exam — Azubix</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/exam.css}">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="exam-page">
+
+    <!-- ── Header ─────────────────────────────────────────── -->
+    <div class="exam-header">
+        <div>
+            <nav class="exam-breadcrumb">
+                <a th:href="@{/}">Home</a>
+                <span class="exam-breadcrumb-sep">›</span>
+                <a th:href="@{/categories}">Courses</a>
+                <span class="exam-breadcrumb-sep">›</span>
+                <a th:href="@{/category/{id}(id=${topic.category.id})}"
+                   th:text="${topic.category.name}">Category</a>
+                <span class="exam-breadcrumb-sep">›</span>
+                <a th:href="@{/topic/{id}(id=${topic.id})}"
+                   th:text="${topic.title}">Topic</a>
+                <span class="exam-breadcrumb-sep">›</span>
+                <span>Exam</span>
+            </nav>
+            <h1 class="exam-title">🎓 Exam Simulation</h1>
+            <p class="exam-sub" th:text="${topic.title}">Topic</p>
+        </div>
+
+        <!-- Best score pill (authenticated + has previous attempt) -->
+        <div class="exam-best" th:if="${bestAttempt != null}">
+            <span class="exam-best-label">Best Score</span>
+            <span class="exam-best-score"
+                  th:text="${bestAttempt.score} + '/' + ${bestAttempt.totalQuestions}">0/0</span>
+            <span class="exam-best-pct"
+                  th:text="${bestAttempt.percentage} + '%'">0%</span>
+        </div>
+    </div>
+
+    <!-- ── No questions yet ────────────────────────────────── -->
+    <div th:if="${#lists.isEmpty(questions)}" class="exam-empty">
+        <div class="exam-empty-icon">📋</div>
+        <h2>No exam questions yet</h2>
+        <p>The admin hasn't added exam questions for this topic yet. Check back soon!</p>
+    </div>
+
+    <!-- ── Exam form ───────────────────────────────────────── -->
+    <form th:if="${not #lists.isEmpty(questions)}"
+          th:action="@{/topic/{id}/exam/submit(id=${topic.id})}"
+          method="post" id="examForm">
+
+        <div class="exam-questions">
+            <div th:each="q, iter : ${questions}" class="exam-q">
+
+                <!-- Question number + type badge -->
+                <div class="exam-q-num">
+                    <span th:text="'Q' + (${iter.index + 1})">Q1</span>
+                    <span class="exam-q-type-badge"
+                          th:text="${q.type == T(com.learnhub.entity.Question.QuestionType).MULTIPLE_CHOICE} ? 'Multiple Choice' :
+                                    (${q.type == T(com.learnhub.entity.Question.QuestionType).TRUE_FALSE} ? 'True / False' : 'Fill in the Blank')">
+                        Type
+                    </span>
+                </div>
+
+                <!-- Question text -->
+                <div class="exam-q-text" th:text="${q.text}">Question text</div>
+
+                <!-- ── MULTIPLE CHOICE ─────────────────────── -->
+                <div th:if="${q.type == T(com.learnhub.entity.Question.QuestionType).MULTIPLE_CHOICE}"
+                     class="exam-options">
+                    <label th:each="opt, oi : ${optionsMap[q.id]}"
+                           class="exam-option"
+                           th:onclick="selectOption(this, [[${q.id}]])">
+                        <input type="radio"
+                               th:name="${q.id}"
+                               th:value="${oi.index}"
+                               required>
+                        <div class="exam-option-key"
+                             th:text="${oi.index == 0 ? 'A' : (oi.index == 1 ? 'B' : (oi.index == 2 ? 'C' : 'D'))}">A</div>
+                        <span class="exam-option-text" th:text="${opt}">Option</span>
+                    </label>
+                </div>
+
+                <!-- ── TRUE / FALSE ────────────────────────── -->
+                <div th:if="${q.type == T(com.learnhub.entity.Question.QuestionType).TRUE_FALSE}"
+                     class="exam-tf">
+                    <label class="exam-tf-btn" th:onclick="selectTF(this, [[${q.id}]], 'true')">
+                        <input type="radio" th:name="${q.id}" value="true" required>
+                        ✓ True
+                    </label>
+                    <label class="exam-tf-btn" th:onclick="selectTF(this, [[${q.id}]], 'false')">
+                        <input type="radio" th:name="${q.id}" value="false" required>
+                        ✗ False
+                    </label>
+                </div>
+
+                <!-- ── FILL IN THE BLANK ───────────────────── -->
+                <div th:if="${q.type == T(com.learnhub.entity.Question.QuestionType).FILL_BLANK}"
+                     class="exam-fill">
+                    <input type="text"
+                           th:name="${q.id}"
+                           placeholder="Type your answer here…"
+                           autocomplete="off" required>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Submit bar ──────────────────────────────────── -->
+        <div class="exam-submit-bar">
+            <div class="exam-submit-info">
+                <strong th:text="${#lists.size(questions)}">0</strong> questions
+                <span sec:authorize="!isAuthenticated()"> ·
+                    <a th:href="@{/login}" style="color:#a78bfa;">Sign in</a> to save your result
+                </span>
+            </div>
+            <button type="submit" class="exam-submit-btn">
+                Submit Exam →
+            </button>
+        </div>
+    </form>
+
+    <!-- ── Previous attempts ───────────────────────────────── -->
+    <div sec:authorize="isAuthenticated()"
+         th:if="${recentAttempts != null and not #lists.isEmpty(recentAttempts)}"
+         class="exam-history">
+        <div class="exam-history-title">Your Previous Attempts</div>
+        <div class="exam-history-list">
+            <a th:each="a : ${recentAttempts}"
+               th:href="@{/topic/{tid}/exam/result/{aid}(tid=${topic.id},aid=${a.id})}"
+               class="exam-history-row"
+               style="text-decoration:none; color:inherit;">
+                <span class="exam-history-date"
+                      th:text="${#temporals.format(a.completedAt, 'MMM d, yyyy HH:mm')}">Date</span>
+                <span class="exam-history-score"
+                      th:classappend="${a.passed} ? 'exam-history-pass' : 'exam-history-fail'"
+                      th:text="${a.score} + '/' + ${a.totalQuestions}">0/0</span>
+                <span class="exam-history-badge"
+                      th:classappend="${a.passed} ? 'badge-pass' : 'badge-fail'"
+                      th:text="${a.passed} ? 'Passed' : 'Failed'">-</span>
+            </a>
+        </div>
+    </div>
+
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+
+<script>
+// Multiple choice visual selection
+function selectOption(label, qId) {
+    document.querySelectorAll('.exam-option[data-qid="' + qId + '"]').forEach(function(el) {
+        el.classList.remove('selected');
+    });
+    // Add data-qid to all options for the same question (set on click)
+    label.closest('.exam-options').querySelectorAll('.exam-option').forEach(function(el) {
+        el.classList.remove('selected');
+    });
+    label.classList.add('selected');
+    label.querySelector('input[type="radio"]').checked = true;
+}
+
+// True/False visual selection
+function selectTF(label, qId, val) {
+    label.closest('.exam-tf').querySelectorAll('.exam-tf-btn').forEach(function(el) {
+        el.classList.remove('selected');
+    });
+    label.classList.add('selected');
+    label.querySelector('input[type="radio"]').checked = true;
+}
+</script>
+
+</body>
+</html>

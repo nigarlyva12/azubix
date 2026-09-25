@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Roadmaps — Admin</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/roadmap.css}">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
+    <style>
+        .adm-rm-page { max-width: 1000px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
+        .adm-rm-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+        .adm-rm-header h1 { font-size: 1.5rem; font-weight: 700; color: #eeeef8; }
+        .adm-form-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; padding: 1.5rem; margin-bottom: 2.5rem; }
+        .adm-form-title { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #7c6cf0; margin-bottom: 1.25rem; }
+        .adm-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        @media (max-width: 600px) { .adm-form-row { grid-template-columns: 1fr; } }
+        .adm-field { margin-bottom: 0; }
+        .adm-label { display: block; font-size: 0.78rem; font-weight: 600; color: #6a6a8a; margin-bottom: 0.3rem; }
+        .adm-input, .adm-select { width: 100%; padding: 0.6rem 0.85rem; border-radius: 9px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09); color: #e0e0f0; font-size: 0.88rem; font-family: 'DM Sans', sans-serif; outline: none; box-sizing: border-box; }
+        .adm-input:focus, .adm-select:focus { border-color: rgba(124,108,240,0.4); }
+        .adm-select option { background: #13131f; }
+        .adm-submit-btn { padding: 0.65rem 1.75rem; border-radius: 10px; border: none; cursor: pointer; font-size: 0.88rem; font-weight: 700; font-family: 'DM Sans', sans-serif; background: linear-gradient(135deg, #7c6cf0, #2dd4bf); color: #fff; box-shadow: 0 4px 14px rgba(124,108,240,0.3); transition: transform 0.2s; }
+        .adm-submit-btn:hover { transform: translateY(-1px); }
+
+        /* Table */
+        .adm-table-wrap { }
+        .adm-section-heading { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #4a4a65; margin-bottom: 0.85rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: space-between; }
+        .adm-rm-list { display: flex; flex-direction: column; gap: 0.75rem; }
+        .adm-rm-item { display: flex; align-items: center; gap: 1rem; background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.06); border-radius: 13px; padding: 1rem 1.25rem; flex-wrap: wrap; }
+        .adm-rm-item-info { flex: 1; min-width: 0; }
+        .adm-rm-item-title { font-size: 0.95rem; font-weight: 700; color: #d0d0e8; margin-bottom: 0.2rem; }
+        .adm-rm-item-meta { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+        .adm-rm-exam { font-size: 0.75rem; color: #5a5a7a; }
+        .adm-rm-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+        .adm-btn { padding: 0.38rem 0.85rem; border-radius: 8px; font-size: 0.78rem; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.18s; text-decoration: none; display: inline-flex; align-items: center; gap: 0.3rem; }
+        .adm-btn-primary { background: rgba(124,108,240,0.12); border: 1px solid rgba(124,108,240,0.25); color: #a78bfa; }
+        .adm-btn-primary:hover { background: rgba(124,108,240,0.2); }
+        .adm-btn-success { background: rgba(45,212,191,0.1); border: 1px solid rgba(45,212,191,0.25); color: #2dd4bf; }
+        .adm-btn-success:hover { background: rgba(45,212,191,0.18); }
+        .adm-btn-warn { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.25); color: #f59e0b; }
+        .adm-btn-warn:hover { background: rgba(245,158,11,0.18); }
+        .adm-btn-danger { background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.2); color: #f87171; }
+        .adm-btn-danger:hover { background: rgba(248,113,113,0.15); }
+        .adm-status-pill { font-size: 0.62rem; font-weight: 700; border-radius: 20px; padding: 0.15rem 0.55rem; font-family: 'JetBrains Mono', monospace; }
+        .adm-status-pub { background: rgba(45,212,191,0.1); border: 1px solid rgba(45,212,191,0.25); color: #2dd4bf; }
+        .adm-status-draft { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.25); color: #f59e0b; }
+
+        html:not([data-theme="dark"]) .adm-rm-page { color: #1a1a2e; }
+        html:not([data-theme="dark"]) .adm-rm-header h1 { color: #1a1a2e; }
+        html:not([data-theme="dark"]) .adm-form-card, html:not([data-theme="dark"]) .adm-rm-item { background: #fff; border-color: #e2e8f0; }
+        html:not([data-theme="dark"]) .adm-input, html:not([data-theme="dark"]) .adm-select { background: #f8f9fb; border-color: #e2e8f0; color: #1a1a2e; }
+        html:not([data-theme="dark"]) .adm-rm-item-title { color: #1a1a2e; }
+    </style>
+</head>
+<body>
+
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="adm-rm-page">
+
+    <div class="adm-rm-header">
+        <h1>🗺️ Roadmaps</h1>
+        <a th:href="@{/admin}" style="font-size:0.82rem;color:#5a5a7a;text-decoration:none;">← Dashboard</a>
+    </div>
+
+    <div th:if="${success}" class="rm-flash rm-flash-ok" th:text="${success}"></div>
+    <div th:if="${error}"   class="rm-flash rm-flash-err" th:text="${error}"></div>
+
+    <!-- ── Create form ──────────────────────────────────────────── -->
+    <div class="adm-form-card">
+        <div class="adm-form-title">✦ Create New Roadmap</div>
+        <form th:action="@{/admin/roadmaps/create}" method="post">
+            <div class="adm-form-row" style="margin-bottom:0.75rem;">
+                <div class="adm-field">
+                    <label class="adm-label">Roadmap Title</label>
+                    <input type="text" class="adm-input" name="title" placeholder="e.g. IHK AP1 — Safe Plan" required>
+                </div>
+                <div class="adm-field">
+                    <label class="adm-label">Exam Name</label>
+                    <input type="text" class="adm-input" name="examName" list="examSuggestions"
+                           placeholder="e.g. IHK Fachinformatiker AP1" required>
+                    <datalist id="examSuggestions">
+                        <option th:each="name : ${examNames}" th:value="${name}"></option>
+                    </datalist>
+                </div>
+            </div>
+            <div class="adm-form-row" style="margin-bottom:0.75rem;">
+                <div class="adm-field">
+                    <label class="adm-label">Plan Type</label>
+                    <select class="adm-select" name="planType" required>
+                        <option th:each="pt : ${planTypes}" th:value="${pt.name()}"
+                                th:text="${pt.label} + ' (' + ${pt.duration} + ')'">Plan</option>
+                    </select>
+                </div>
+                <div class="adm-field">
+                    <label class="adm-label">Estimated Hours <span style="color:#4a4a65;font-weight:400;">(optional)</span></label>
+                    <input type="number" class="adm-input" name="estimatedHours" placeholder="e.g. 120" min="1">
+                </div>
+            </div>
+            <div class="adm-field" style="margin-bottom:0.85rem;">
+                <label class="adm-label">Description <span style="color:#4a4a65;font-weight:400;">(optional)</span></label>
+                <input type="text" class="adm-input" name="description" placeholder="Brief description shown on the card">
+            </div>
+            <button type="submit" class="adm-submit-btn">Create & Open Builder →</button>
+        </form>
+    </div>
+
+    <!-- ── Existing roadmaps ─────────────────────────────────────── -->
+    <div class="adm-section-heading">
+        <span>All Roadmaps</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;background:rgba(124,108,240,0.1);border:1px solid rgba(124,108,240,0.18);color:#a78bfa;border-radius:20px;padding:0.1rem 0.6rem;"
+              th:text="${#lists.size(roadmaps)} + ' total'">0</span>
+    </div>
+
+    <div th:if="${#lists.isEmpty(roadmaps)}"
+         style="text-align:center;padding:3rem;color:#4a4a65;font-size:0.88rem;">
+        No roadmaps yet — create one above.
+    </div>
+
+    <div class="adm-rm-list">
+        <div th:each="rm : ${roadmaps}" class="adm-rm-item">
+            <div class="adm-rm-item-info">
+                <div class="adm-rm-item-title" th:text="${rm.title}">Title</div>
+                <div class="adm-rm-item-meta">
+                    <span class="adm-rm-exam" th:text="${rm.examName}">Exam</span>
+                    <span class="adm-status-pill"
+                          th:classappend="${rm.published} ? ' adm-status-pub' : ' adm-status-draft'"
+                          th:text="${rm.published} ? 'Published' : 'Draft'">Status</span>
+                    <span class="adm-rm-exam"
+                          th:classappend="${rm.planType.name() == 'SAFE_6M'} ? ' rm-plan-safe' :
+                                          (${rm.planType.name() == 'FAST_3M'} ? ' rm-plan-fast' : ' rm-plan-crazy')"
+                          style="font-size:0.62rem;font-weight:700;border-radius:20px;padding:0.15rem 0.55rem;font-family:'JetBrains Mono',monospace;"
+                          th:text="${rm.planType.label}">Plan</span>
+                    <span class="adm-rm-exam"
+                          th:text="${#lists.size(rm.nodes)} + ' nodes'">0 nodes</span>
+                </div>
+            </div>
+            <div class="adm-rm-actions">
+                <a th:href="@{/admin/roadmaps/{id}/builder(id=${rm.id})}"
+                   class="adm-btn adm-btn-primary">🔧 Builder</a>
+                <a th:href="@{/roadmaps/{id}(id=${rm.id})}" target="_blank"
+                   class="adm-btn adm-btn-warn">👁 Preview</a>
+                <form th:if="${!rm.published}"
+                      th:action="@{/admin/roadmaps/{id}/publish(id=${rm.id})}" method="post" style="display:inline;">
+                    <button type="submit" class="adm-btn adm-btn-success">✓ Publish</button>
+                </form>
+                <form th:if="${rm.published}"
+                      th:action="@{/admin/roadmaps/{id}/unpublish(id=${rm.id})}" method="post" style="display:inline;">
+                    <button type="submit" class="adm-btn adm-btn-warn">↓ Unpublish</button>
+                </form>
+                <form th:action="@{/admin/roadmaps/{id}/delete(id=${rm.id})}" method="post" style="display:inline;"
+                      onsubmit="return confirm('Delete this roadmap and all its nodes?')">
+                    <button type="submit" class="adm-btn adm-btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

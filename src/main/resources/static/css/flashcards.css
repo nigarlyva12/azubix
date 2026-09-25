@@ -1,0 +1,236 @@
+/* ============================================================
+   AZUBIX — Flashcards (flip mode + match game)
+   ============================================================ */
+body { background: #0a0a16; font-family: 'DM Sans', sans-serif; }
+
+/* ── Page wrapper ─────────────────────────────────────────── */
+.fc-page { max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 5rem; }
+
+/* ── Header ───────────────────────────────────────────────── */
+.fc-breadcrumb {
+    display: flex; align-items: center; gap: 0.4rem;
+    font-size: 0.78rem; color: #4a4a65; margin-bottom: 0.8rem;
+}
+.fc-breadcrumb a { color: #6a6a8a; text-decoration: none; transition: color 0.2s; }
+.fc-breadcrumb a:hover { color: #a78bfa; }
+.fc-breadcrumb-sep { color: #35355a; }
+.fc-title { font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 700; color: #eeeef8; margin: 0 0 0.3rem; }
+.fc-sub   { font-size: 0.88rem; color: #5a5a7a; }
+
+/* Progress bar */
+.fc-progress-wrap { margin: 1.25rem 0; }
+.fc-progress-bar  { height: 5px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
+.fc-progress-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #7c6cf0, #2dd4bf); transition: width 0.5s ease; }
+.fc-progress-label{ display: flex; justify-content: space-between; margin-top: 0.4rem; font-size: 0.7rem; font-family: 'JetBrains Mono', monospace; }
+.fc-progress-text { color: #4a4a65; }
+.fc-progress-pct  { color: #7c6cf0; font-weight: 700; }
+
+/* ── Mode tabs ────────────────────────────────────────────── */
+.fc-tabs { display: flex; gap: 0.5rem; margin: 1.5rem 0 2rem; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 0; }
+.fc-tab {
+    padding: 0.55rem 1.25rem; border-radius: 10px 10px 0 0;
+    font-size: 0.85rem; font-weight: 600; color: #5a5a7a;
+    background: transparent; border: none; cursor: pointer;
+    transition: all 0.2s; font-family: 'DM Sans', sans-serif;
+    border-bottom: 2px solid transparent; position: relative; top: 1px;
+}
+.fc-tab:hover { color: #a78bfa; }
+.fc-tab.active { color: #a78bfa; border-bottom-color: #7c6cf0; }
+
+/* ──────────────────────────────────────────────────────────
+   FLIP CARD MODE
+   ────────────────────────────────────────────────────────── */
+#mode-flip {}
+
+/* Single card view */
+.fc-card-area {
+    display: flex; align-items: center; gap: 1rem; justify-content: center; flex-wrap: wrap;
+}
+.fc-nav-btn {
+    width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    color: #7c6cf0; font-size: 1.2rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+}
+.fc-nav-btn:hover:not(:disabled) { background: rgba(124,108,240,0.12); border-color: rgba(124,108,240,0.25); }
+.fc-nav-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+
+/* The flip card itself */
+.fc-card-wrapper {
+    perspective: 1200px; flex: 1; max-width: 560px; min-width: 280px;
+    transform-style: preserve-3d;
+}
+.fc-card {
+    width: 100%; height: 240px; position: relative; cursor: pointer;
+    transform-style: preserve-3d; transition: transform 0.5s cubic-bezier(0.4,0,0.2,1);
+}
+.fc-card.flipped { transform: rotateY(180deg); }
+.fc-card-face {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    border-radius: 18px;
+    backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 2rem 1.75rem; text-align: center;
+    box-sizing: border-box;
+}
+.fc-card-front {
+    transform: rotateY(0deg);
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+}
+.fc-card-back {
+    background: linear-gradient(135deg, rgba(124,108,240,0.12), rgba(45,212,191,0.07));
+    border: 1px solid rgba(124,108,240,0.22);
+    transform: rotateY(180deg);
+    box-shadow: 0 8px 40px rgba(124,108,240,0.2);
+}
+.fc-card-hint {
+    font-size: 0.65rem; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: #35355a; margin-bottom: 1rem;
+}
+.fc-card-back .fc-card-hint { color: rgba(124,108,240,0.5); }
+.fc-card-text {
+    font-size: 1.1rem; font-weight: 600; color: #e8e8f8; line-height: 1.5;
+}
+.fc-card-back .fc-card-text { color: #d8d8f0; }
+.fc-card-num {
+    position: absolute; bottom: 0.9rem; right: 1.1rem;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: #35355a;
+}
+
+/* Card controls */
+.fc-card-controls {
+    display: flex; align-items: center; justify-content: center; gap: 0.75rem;
+    margin-top: 1.25rem; flex-wrap: wrap;
+}
+.fc-ctrl-btn {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.5rem 1.1rem; border-radius: 9px; font-size: 0.82rem; font-weight: 600;
+    font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.2s;
+}
+.fc-ctrl-known {
+    background: rgba(45,212,191,0.1); border: 1px solid rgba(45,212,191,0.25); color: #2dd4bf;
+}
+.fc-ctrl-known:hover { background: rgba(45,212,191,0.18); box-shadow: 0 0 16px rgba(45,212,191,0.15); }
+.fc-ctrl-unknown {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: #6a6a8a;
+}
+.fc-ctrl-unknown:hover { background: rgba(255,255,255,0.07); color: #a8a8c8; }
+
+.fc-card-counter { font-size: 0.82rem; color: #4a4a65; font-family: 'JetBrains Mono', monospace; }
+
+/* Shuffle toggle */
+.fc-shuffle-btn {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    font-size: 0.78rem; color: #55558a; background: none; border: none;
+    cursor: pointer; font-family: 'DM Sans', sans-serif; transition: color 0.2s;
+}
+.fc-shuffle-btn:hover { color: #a78bfa; }
+
+/* ──────────────────────────────────────────────────────────
+   MATCH GAME MODE
+   ────────────────────────────────────────────────────────── */
+#mode-match {}
+
+.match-header {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;
+    flex-wrap: wrap; gap: 0.75rem;
+}
+.match-timer {
+    font-family: 'JetBrains Mono', monospace; font-size: 1.3rem; font-weight: 700;
+    color: #a78bfa; letter-spacing: 0.02em;
+}
+.match-timer.running { color: #2dd4bf; }
+.match-timer.urgent  { color: #f87171; animation: timerPulse 0.8s ease infinite; }
+@keyframes timerPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+.match-start-btn {
+    padding: 0.6rem 1.5rem; border-radius: 10px; border: none; cursor: pointer;
+    font-size: 0.88rem; font-weight: 700; font-family: 'DM Sans', sans-serif;
+    background: linear-gradient(135deg, #7c6cf0, #2dd4bf); color: #fff;
+    box-shadow: 0 4px 16px rgba(124,108,240,0.35);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.match-start-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(124,108,240,0.5); }
+
+.match-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem;
+}
+.match-card {
+    padding: 0.85rem 1rem; border-radius: 12px;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+    font-size: 0.88rem; color: #c0c0d8; cursor: pointer;
+    transition: all 0.18s ease; text-align: center; line-height: 1.4; min-height: 64px;
+    display: flex; align-items: center; justify-content: center;
+    user-select: none;
+}
+.match-card:hover:not(.matched):not(.wrong) {
+    background: rgba(124,108,240,0.07); border-color: rgba(124,108,240,0.18);
+    color: #e0e0f0;
+}
+.match-card.selected {
+    background: rgba(124,108,240,0.14); border-color: #7c6cf0; color: #fff;
+    box-shadow: 0 0 0 2px rgba(124,108,240,0.2);
+}
+.match-card.matched {
+    background: rgba(45,212,191,0.1); border-color: rgba(45,212,191,0.3);
+    color: #2dd4bf; cursor: default; pointer-events: none;
+}
+.match-card.wrong {
+    background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.3);
+    color: #f87171; animation: matchShake 0.35s ease;
+}
+@keyframes matchShake {
+    0%, 100% { transform: translateX(0); }
+    25%       { transform: translateX(-6px); }
+    75%       { transform: translateX(6px); }
+}
+
+/* Match game finished overlay */
+.match-result {
+    text-align: center; padding: 3rem 2rem;
+    background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 18px; margin-top: 1.5rem;
+}
+.match-result-icon { font-size: 3rem; margin-bottom: 0.75rem; }
+.match-result h3   { font-size: 1.3rem; color: #eeeef8; margin-bottom: 0.3rem; }
+.match-result p    { font-size: 0.88rem; color: #5a5a7a; margin-bottom: 1.25rem; }
+.match-result-time {
+    font-family: 'JetBrains Mono', monospace; font-size: 2rem; font-weight: 700;
+    color: #2dd4bf; margin-bottom: 0.25rem;
+}
+
+/* ── Empty state ──────────────────────────────────────────── */
+.fc-empty {
+    text-align: center; padding: 5rem 2rem;
+    background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 20px;
+}
+.fc-empty-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }
+.fc-empty h2   { font-size: 1.2rem; color: #c0c0d8; margin-bottom: 0.5rem; }
+.fc-empty p    { font-size: 0.88rem; color: #4a4a65; }
+
+/* ── Light theme overrides ────────────────────────────────── */
+html:not([data-theme="dark"]) body { background: #f4f5f7; }
+html:not([data-theme="dark"]) .fc-title  { color: #1a1a2e; }
+html:not([data-theme="dark"]) .fc-sub    { color: #64748b; }
+html:not([data-theme="dark"]) .fc-progress-bar  { background: #e2e8f0; }
+html:not([data-theme="dark"]) .fc-tab    { color: #64748b; }
+html:not([data-theme="dark"]) .fc-tabs   { border-bottom-color: #e2e8f0; }
+html:not([data-theme="dark"]) .fc-tab.active { color: #7c6cf0; border-bottom-color: #7c6cf0; }
+html:not([data-theme="dark"]) .fc-card-front { background: #ffffff; border-color: #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+html:not([data-theme="dark"]) .fc-card-text  { color: #1a1a2e; }
+html:not([data-theme="dark"]) .fc-card-hint  { color: #94a3b8; }
+html:not([data-theme="dark"]) .fc-nav-btn    { background: #fff; border-color: #e2e8f0; }
+html:not([data-theme="dark"]) .match-card    { background: #ffffff; border-color: #e2e8f0; color: #334155; }
+html:not([data-theme="dark"]) .fc-empty, html:not([data-theme="dark"]) .match-result { background: #fff; border-color: #e2e8f0; }
+html:not([data-theme="dark"]) .fc-empty h2, html:not([data-theme="dark"]) .match-result h3 { color: #1a1a2e; }
+html:not([data-theme="dark"]) .fc-empty p, html:not([data-theme="dark"]) .match-result p   { color: #64748b; }
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 640px) {
+    .fc-page { padding: 1.5rem 1rem 3.5rem; }
+    .match-grid { grid-template-columns: 1fr; }
+    .fc-card-controls { gap: 0.5rem; }
+}

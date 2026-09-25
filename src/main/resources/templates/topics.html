@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${category.name} + ' — Azubix'">Category — Azubix</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/topics.css}">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<!-- ══════════════════════════════════════════════════════════
+     HERO BANNER
+     ══════════════════════════════════════════════════════════ -->
+<div class="tp-banner">
+    <div class="tp-banner-inner">
+
+        <!-- Breadcrumb -->
+        <nav class="tp-breadcrumb">
+            <a th:href="@{/}" th:text="#{nav.home}">Home</a>
+            <span class="tp-breadcrumb-sep">›</span>
+            <a th:href="@{/categories}" th:text="#{nav.courses}">Courses</a>
+            <span class="tp-breadcrumb-sep">›</span>
+            <span th:text="${category.name}">Category</span>
+        </nav>
+
+        <div class="tp-banner-top">
+            <div class="tp-banner-left">
+
+                <!-- Eyebrow tag -->
+                <div class="tp-banner-tag">
+                    <span class="tag-dot"></span>
+                    <span th:text="${category.name}">Category</span>
+                </div>
+
+                <h1 th:text="${category.name}">Category Name</h1>
+
+                <p class="tp-banner-desc"
+                   th:if="${category.description != null and not #strings.isEmpty(category.description)}"
+                   th:text="${category.description}">
+                    Category description goes here.
+                </p>
+
+                <!-- Stats pill -->
+                <div class="tp-banner-stats">
+                    <div class="tp-stat">
+                        <span class="tp-stat-icon">📚</span>
+                        <span class="tp-stat-text">
+                            <span class="tp-stat-num" th:text="${#lists.size(topics)}">0</span>
+                            Topics
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Progress bar — authenticated users only -->
+                <div sec:authorize="isAuthenticated()"
+                     class="tp-banner-progress"
+                     th:if="${completedTopicIds != null and not #lists.isEmpty(topics)}">
+                    <div class="tp-progress-track">
+                        <div class="tp-progress-fill"
+                             th:style="'width:' + (${completedTopicIds.size()} * 100 / ${#lists.size(topics)}) + '%'">
+                        </div>
+                    </div>
+                    <div class="tp-progress-label">
+                        <span class="tp-progress-text"
+                              th:text="${completedTopicIds.size()} + ' / ' + ${#lists.size(topics)} + ' completed'">
+                            0 / 0 completed
+                        </span>
+                        <span class="tp-progress-pct"
+                              th:text="${completedTopicIds.size() * 100 / #lists.size(topics)} + '%'">
+                            0%
+                        </span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     TOPICS LIST
+     ══════════════════════════════════════════════════════════ -->
+<section class="tp-section">
+    <div class="tp-section-inner">
+
+        <div class="tp-section-label"
+             th:text="'Topics — ' + ${#lists.size(topics)}">Topics — 0</div>
+
+        <!-- Topic cards -->
+        <div class="tp-list" th:if="${not #lists.isEmpty(topics)}">
+            <a th:each="topic, iter : ${topics}"
+               th:href="@{/topic/{id}(id=${topic.id})}"
+               class="tp-card">
+
+                <span class="tp-card-num"
+                      th:text="${iter.index + 1 < 10 ? '0' + (iter.index + 1) : (iter.index + 1)}">01</span>
+
+                <div class="tp-card-content">
+                    <div class="tp-card-title" th:text="${topic.title}">Topic Title</div>
+                    <p class="tp-card-desc"
+                       th:if="${topic.description != null and not #strings.isEmpty(topic.description)}"
+                       th:text="${topic.description}">Topic description</p>
+                </div>
+
+                <div class="tp-card-meta">
+                    <span sec:authorize="isAuthenticated()"
+                          th:if="${completedTopicIds != null and completedTopicIds.contains(topic.id)}"
+                          class="tp-card-done">
+                        ✓ <span th:text="#{article.completed}">Done</span>
+                    </span>
+                </div>
+
+                <div class="tp-card-arrow">›</div>
+            </a>
+        </div>
+
+        <!-- Empty state -->
+        <div th:if="${#lists.isEmpty(topics)}" class="tp-empty">
+            <div class="tp-empty-card">
+                <div class="tp-empty-icon">📂</div>
+                <p>No topics in this category yet.</p>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<!-- Footer -->
+<div th:replace="~{fragments/footer :: footer}"></div>
+
+</body>
+</html>

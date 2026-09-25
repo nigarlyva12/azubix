@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Flashcards — ' + ${topic.title} + ' — Azubix'">Flashcards — Azubix</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/flashcards.css}">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="fc-page">
+
+    <!-- ── Header ─────────────────────────────────────────────── -->
+    <nav class="fc-breadcrumb">
+        <a th:href="@{/}">Home</a>
+        <span class="fc-breadcrumb-sep">›</span>
+        <a th:href="@{/categories}">Courses</a>
+        <span class="fc-breadcrumb-sep">›</span>
+        <a th:href="@{/category/{id}(id=${topic.category.id})}"
+           th:text="${topic.category.name}">Category</a>
+        <span class="fc-breadcrumb-sep">›</span>
+        <a th:href="@{/topic/{id}(id=${topic.id})}"
+           th:text="${topic.title}">Topic</a>
+        <span class="fc-breadcrumb-sep">›</span>
+        <span>Flashcards</span>
+    </nav>
+
+    <h1 class="fc-title">🃏 Flashcards</h1>
+    <p class="fc-sub" th:text="${topic.title}">Topic</p>
+
+    <!-- ── Empty state ────────────────────────────────────────── -->
+    <div th:if="${#lists.isEmpty(cards)}" class="fc-empty">
+        <div class="fc-empty-icon">🃏</div>
+        <h2>No flashcards yet</h2>
+        <p>The admin hasn't added flashcards for this topic yet. Check back soon!</p>
+    </div>
+
+    <!-- ── Content (only if cards exist) ─────────────────────── -->
+    <div th:if="${not #lists.isEmpty(cards)}">
+
+        <!-- Progress bar (auth users) -->
+        <div sec:authorize="isAuthenticated()" class="fc-progress-wrap">
+            <div class="fc-progress-bar">
+                <div class="fc-progress-fill" id="progressFill"
+                     th:style="'width:' + (${knownCount != null ? knownCount : 0} * 100 / ${#lists.size(cards)}) + '%'"></div>
+            </div>
+            <div class="fc-progress-label">
+                <span class="fc-progress-text">
+                    <span id="knownCount" th:text="${knownCount != null ? knownCount : 0}">0</span>
+                    / <span th:text="${#lists.size(cards)}">0</span> known
+                </span>
+                <span class="fc-progress-pct" id="progressPct"
+                      th:text="${knownCount != null ? #numbers.formatInteger(knownCount * 100 / #lists.size(cards), 1) : 0} + '%'">0%</span>
+            </div>
+        </div>
+
+        <!-- ── Mode tabs ────────────────────────────────────────── -->
+        <div class="fc-tabs">
+            <button class="fc-tab active" onclick="switchMode('flip', this)">🔁 Flip Cards</button>
+            <button class="fc-tab" onclick="switchMode('match', this)">🎯 Match Game</button>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════
+             FLIP CARD MODE
+             ══════════════════════════════════════════════════════ -->
+        <div id="mode-flip">
+
+            <!-- Card area -->
+            <div class="fc-card-area">
+                <button class="fc-nav-btn" id="prevBtn" onclick="prevCard()" disabled>‹</button>
+
+                <div class="fc-card-wrapper">
+                    <div class="fc-card" id="mainCard" onclick="flipCard()">
+                        <div class="fc-card-face fc-card-front">
+                            <div class="fc-card-hint">TERM</div>
+                            <div class="fc-card-text" id="cardFront">Loading…</div>
+                            <div class="fc-card-num" id="cardNum">1 / 1</div>
+                        </div>
+                        <div class="fc-card-face fc-card-back">
+                            <div class="fc-card-hint">DEFINITION</div>
+                            <div class="fc-card-text" id="cardBack">Loading…</div>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="fc-nav-btn" id="nextBtn" onclick="nextCard()">›</button>
+            </div>
+
+            <!-- Controls -->
+            <div class="fc-card-controls">
+                <button class="fc-ctrl-btn fc-ctrl-known" onclick="markKnown(true)">
+                    ✓ Got it
+                </button>
+                <span class="fc-card-counter" id="cardCounter">0 known</span>
+                <button class="fc-ctrl-btn fc-ctrl-unknown" onclick="markKnown(false)">
+                    ✗ Still learning
+                </button>
+                <button class="fc-shuffle-btn" onclick="shuffleCards()">⇄ Shuffle</button>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════
+             MATCH GAME MODE
+             ══════════════════════════════════════════════════════ -->
+        <div id="mode-match" style="display:none;">
+            <div class="match-header">
+                <div class="match-timer" id="matchTimer">00:00</div>
+                <button class="match-start-btn" id="matchStartBtn" onclick="startMatch()">
+                    Start Game
+                </button>
+            </div>
+            <div class="match-grid" id="matchGrid">
+                <!-- Populated by JS -->
+            </div>
+            <!-- Result overlay (hidden until done) -->
+            <div class="match-result" id="matchResult" style="display:none;">
+                <div class="match-result-icon">🎉</div>
+                <div class="match-result-time" id="matchResultTime">00:00</div>
+                <h3>All matched!</h3>
+                <p>Great job! Ready to beat your time?</p>
+                <button class="match-start-btn" onclick="startMatch()">Play Again</button>
+            </div>
+        </div>
+
+    </div><!-- /content -->
+
+</div><!-- /fc-page -->
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+
+<!-- ── Inline card data ────────────────────────────────────────────── -->
+<script th:inline="javascript">
+/*<![CDATA[*/
+const ALL_CARDS = /*[[${cards}]]*/ [];
+const CARD_DATA = ALL_CARDS.map(function(c) {
+    return { id: c.id, front: c.front, back: c.back };
+});
+
+// Progress map from server (cardId -> known boolean), auth users only
+const PROGRESS_MAP_RAW = /*[[${progressMap != null ? progressMap : {}}]]*/ {};
+const progressMap = {};
+Object.keys(PROGRESS_MAP_RAW).forEach(function(k) { progressMap[Number(k)] = PROGRESS_MAP_RAW[k]; });
+
+const TOPIC_ID = /*[[${topic.id}]]*/ 0;
+const IS_AUTH  = /*[[${#authorization.expression('isAuthenticated()')}]]*/ false;
+/*]]>*/
+</script>
+
+<script>
+// ──────────────────────────────────────────────────────────────────
+// FLIP CARD STATE
+// ──────────────────────────────────────────────────────────────────
+let cards = CARD_DATA.slice();
+let currentIdx = 0;
+let knownCount = parseInt(document.getElementById('knownCount')?.textContent || '0', 10);
+
+function render() {
+    if (!cards.length) return;
+    const c = cards[currentIdx];
+    document.getElementById('cardFront').textContent = c.front;
+    document.getElementById('cardBack').textContent  = c.back;
+    document.getElementById('cardNum').textContent   = (currentIdx + 1) + ' / ' + cards.length;
+    document.getElementById('prevBtn').disabled = currentIdx === 0;
+    document.getElementById('nextBtn').disabled = currentIdx === cards.length - 1;
+    // Reset flip on navigation
+    document.getElementById('mainCard').classList.remove('flipped');
+    updateCounter();
+}
+
+function flipCard() {
+    document.getElementById('mainCard').classList.toggle('flipped');
+}
+
+function prevCard() {
+    if (currentIdx > 0) { currentIdx--; render(); }
+}
+
+function nextCard() {
+    if (currentIdx < cards.length - 1) { currentIdx++; render(); }
+}
+
+function shuffleCards() {
+    for (let i = cards.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [cards[i], cards[j]] = [cards[j], cards[i]];
+    }
+    currentIdx = 0;
+    render();
+}
+
+function updateCounter() {
+    const el = document.getElementById('cardCounter');
+    if (el) el.textContent = knownCount + ' known';
+}
+
+function markKnown(known) {
+    if (!IS_AUTH) {
+        // Guest: just move forward
+        if (known && currentIdx < cards.length - 1) nextCard();
+        else if (!known && currentIdx < cards.length - 1) nextCard();
+        return;
+    }
+    const card = cards[currentIdx];
+    fetch('/topic/' + TOPIC_ID + '/flashcards/progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json',
+                   'X-CSRF-TOKEN': getCsrf() },
+        body: JSON.stringify({ flashcardId: card.id, known: known })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        knownCount = data.knownCount;
+        updateProgressBar(data.knownCount, data.total);
+        updateCounter();
+        if (currentIdx < cards.length - 1) nextCard();
+    });
+}
+
+function updateProgressBar(known, total) {
+    const fill = document.getElementById('progressFill');
+    const pct  = document.getElementById('progressPct');
+    const cnt  = document.getElementById('knownCount');
+    if (!fill) return;
+    const p = total > 0 ? Math.round(known * 100 / total) : 0;
+    fill.style.width = p + '%';
+    if (pct)  pct.textContent  = p + '%';
+    if (cnt)  cnt.textContent  = known;
+}
+
+function getCsrf() {
+    const m = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+    return m ? m[1] : '';
+}
+
+// ──────────────────────────────────────────────────────────────────
+// MATCH GAME
+// ──────────────────────────────────────────────────────────────────
+let matchTimerInterval = null;
+let matchSeconds = 0;
+let selectedMatchCard = null;
+let matchedCount = 0;
+let matchGameCards = []; // { id, text, type, pairId, matched }
+
+function switchMode(mode, btn) {
+    document.querySelectorAll('.fc-tab').forEach(function(t) { t.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById('mode-flip').style.display  = mode === 'flip'  ? '' : 'none';
+    document.getElementById('mode-match').style.display = mode === 'match' ? '' : 'none';
+}
+
+function startMatch() {
+    // Take up to 6 cards for the game (12 tiles = 6 pairs)
+    const pool = CARD_DATA.slice(0, 6);
+    if (pool.length < 2) {
+        alert('Need at least 2 flashcards to play!');
+        return;
+    }
+    matchedCount = 0;
+    selectedMatchCard = null;
+
+    // Build tiles: one for front, one for back (paired by card id)
+    let tiles = [];
+    pool.forEach(function(c) {
+        tiles.push({ id: 'f-' + c.id, text: c.front, pairId: c.id, matched: false, type: 'front' });
+        tiles.push({ id: 'b-' + c.id, text: c.back,  pairId: c.id, matched: false, type: 'back'  });
+    });
+    // Shuffle
+    for (let i = tiles.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+    }
+    matchGameCards = tiles;
+
+    // Render grid
+    const grid = document.getElementById('matchGrid');
+    grid.innerHTML = '';
+    tiles.forEach(function(tile) {
+        const el = document.createElement('div');
+        el.className = 'match-card';
+        el.textContent = tile.text;
+        el.dataset.tid = tile.id;
+        el.addEventListener('click', function() { onMatchClick(tile.id, el); });
+        grid.appendChild(el);
+    });
+
+    // Reset & hide result
+    document.getElementById('matchResult').style.display = 'none';
+    grid.style.display = 'grid';
+
+    // Start timer
+    clearInterval(matchTimerInterval);
+    matchSeconds = 0;
+    updateMatchTimer();
+    const timerEl = document.getElementById('matchTimer');
+    timerEl.classList.remove('urgent');
+    timerEl.classList.add('running');
+    matchTimerInterval = setInterval(function() {
+        matchSeconds++;
+        updateMatchTimer();
+    }, 1000);
+}
+
+function updateMatchTimer() {
+    const m = String(Math.floor(matchSeconds / 60)).padStart(2, '0');
+    const s = String(matchSeconds % 60).padStart(2, '0');
+    document.getElementById('matchTimer').textContent = m + ':' + s;
+}
+
+function onMatchClick(tileId, el) {
+    const tile = matchGameCards.find(function(t) { return t.id === tileId; });
+    if (!tile || tile.matched) return;
+    if (selectedMatchCard && selectedMatchCard.id === tileId) return; // same card
+
+    if (!selectedMatchCard) {
+        selectedMatchCard = tile;
+        el.classList.add('selected');
+        return;
+    }
+
+    // Second selection
+    const firstEl = document.querySelector('[data-tid="' + selectedMatchCard.id + '"]');
+    if (selectedMatchCard.pairId === tile.pairId && selectedMatchCard.id !== tile.id) {
+        // Match!
+        el.classList.remove('selected');
+        el.classList.add('matched');
+        if (firstEl) { firstEl.classList.remove('selected'); firstEl.classList.add('matched'); }
+        tile.matched = true;
+        selectedMatchCard.matched = true;
+        matchedCount++;
+        selectedMatchCard = null;
+
+        if (matchedCount === matchGameCards.length / 2) {
+            finishMatch();
+        }
+    } else {
+        // Wrong
+        el.classList.add('wrong');
+        if (firstEl) firstEl.classList.add('wrong');
+        const prev = selectedMatchCard;
+        selectedMatchCard = null;
+        setTimeout(function() {
+            el.classList.remove('wrong', 'selected');
+            const pEl = document.querySelector('[data-tid="' + prev.id + '"]');
+            if (pEl) pEl.classList.remove('wrong', 'selected');
+        }, 600);
+    }
+}
+
+function finishMatch() {
+    clearInterval(matchTimerInterval);
+    const timerEl = document.getElementById('matchTimer');
+    timerEl.classList.remove('running');
+    const m = String(Math.floor(matchSeconds / 60)).padStart(2, '0');
+    const s = String(matchSeconds % 60).padStart(2, '0');
+    document.getElementById('matchResultTime').textContent = m + ':' + s;
+    document.getElementById('matchGrid').style.display = 'none';
+    document.getElementById('matchResult').style.display = 'block';
+}
+
+// ── Init flip card view ────────────────────────────────────────────
+render();
+</script>
+
+</body>
+</html>

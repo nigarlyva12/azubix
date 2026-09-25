@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile — Azubix</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/profile.css}">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navbar -->
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <div class="profile-page">
+
+        <!-- Flash Messages -->
+        <div th:if="${success}" class="alert alert-success" th:text="${success}">Success</div>
+        <div th:if="${error}" class="alert alert-error" th:text="${error}">Error</div>
+
+        <!-- ==============================
+             PROFILE HEADER CARD
+             ============================== -->
+        <div class="profile-header">
+            <!-- Avatar -->
+			<div class="profile-avatar-wrapper">
+			    <!-- Priority: uploaded image > Google image > initials -->
+			    <img th:if="${user.profileImage != null}"
+			         th:src="@{/uploads/{img}(img=${user.profileImage})}"
+			         alt="Profile" class="profile-avatar">
+
+			    <img th:if="${user.profileImage == null && user.profileImageUrl != null}"
+			         th:src="${user.profileImageUrl}"
+			         alt="Profile" class="profile-avatar">
+
+			    <div th:if="${user.profileImage == null && user.profileImageUrl == null}"
+			         class="profile-avatar-placeholder"
+			         th:text="${user.name != null ? user.name.substring(0,1).toUpperCase() : user.email.substring(0,1).toUpperCase()}">
+			        U
+			    </div>
+
+			    <!-- Upload button overlay -->
+			    <form th:action="@{/profile/upload-image}" method="post"
+			          enctype="multipart/form-data" id="avatarForm">
+			        <label class="profile-avatar-upload" th:title="#{profile.uploadImage}">
+			            &#9998;
+			            <input type="file" name="image" accept="image/*"
+			                   onchange="document.getElementById('avatarForm').submit()">
+			        </label>
+			    </form>
+
+			    <!-- Delete image button (show only if user has a custom upload) -->
+				<form th:if="${user.profileImage != null}"
+				      th:action="@{/profile/delete-image}" method="post"
+				      style="position: absolute; bottom: 0; left: 0; z-index: 2;">
+				    <button type="submit" class="profile-avatar-delete" th:title="#{profile.deleteImage}">
+				        &#10005;
+				    </button>
+				</form>
+			</div>
+
+            <!-- User Info -->
+            <div class="profile-info">
+                <div class="profile-name"
+                     th:text="${user.name != null && !user.name.isEmpty() ? user.name : user.email}">
+                    User Name
+                </div>
+                <div class="profile-email" th:text="${user.email}">user@email.com</div>
+
+                <!-- Badges -->
+                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 0.3rem;">
+                    <span th:if="${user.role.name() == 'ADMIN'}" class="profile-badge profile-badge-admin">
+                        ADMIN
+                    </span>
+                    <span th:if="${user.role.name() == 'USER'}" class="profile-badge profile-badge-user">
+                        MEMBER
+                    </span>
+                    <span th:if="${isOAuthUser}" class="profile-badge profile-badge-google">
+                        Google Account
+                    </span>
+                </div>
+
+                <!-- Overall Progress -->
+                <div class="profile-overall" th:if="${overallProgress != null}">
+                    <div class="profile-overall-bar">
+                        <div class="profile-overall-fill"
+                             th:style="'width: ' + ${overallProgress} + '%'"></div>
+                    </div>
+                    <span class="profile-overall-text">
+                        <span th:text="${overallProgress}">0</span>% <span th:text="#{progress.overall}">overall</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==============================
+             LEARNING PROGRESS
+             ============================== -->
+        <div class="profile-section">
+            <div class="profile-section-title">
+                <span class="icon">&#128200;</span> <span th:text="#{profile.learning}">Learning Progress</span>
+            </div>
+
+            <div th:if="${!#maps.isEmpty(progressMap)}" class="progress-grid">
+                <div th:each="entry : ${progressMap}" class="progress-row">
+                    <span class="progress-label" th:text="${entry.key}">Category</span>
+                    <div class="progress-track">
+                        <div class="progress-fill"
+                             th:style="'width: ' + ${entry.value} + '%'"></div>
+                    </div>
+                    <span class="progress-pct">
+                        <span th:text="${entry.value}">0</span>%
+                    </span>
+                </div>
+            </div>
+
+            <div th:if="${#maps.isEmpty(progressMap)}" class="progress-empty"
+                 th:text="#{profile.noProgress}">
+                No progress yet. Start learning to see your progress here!
+            </div>
+        </div>
+
+        <!-- ==============================
+             EDIT NAME
+             ============================== -->
+        <div class="profile-section">
+            <div class="profile-section-title">
+                <span class="icon">&#9998;</span> <span th:text="#{profile.info}">Personal Info</span>
+            </div>
+
+            <form th:action="@{/profile/update-name}" method="post">
+                <div class="profile-form-row">
+                    <div class="form-group">
+                        <label for="name" th:text="#{profile.name}">Display Name</label>
+                        <input type="text" id="name" name="name" class="form-control"
+                               th:value="${user.name}" placeholder="Your name" required>
+                    </div>
+                    <button type="submit" class="profile-save-btn" th:text="#{profile.save}">Save</button>
+                </div>
+            </form>
+
+            <div class="profile-form-row" style="margin-bottom: 0;">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" class="form-control" th:value="${user.email}"
+                           disabled style="opacity: 0.6; cursor: not-allowed;">
+                </div>
+            </div>
+            <p class="profile-note" th:text="#{profile.emailNote}">Email cannot be changed.</p>
+        </div>
+
+        <!-- ==============================
+             CHANGE PASSWORD (not for Google users)
+             ============================== -->
+        <div class="profile-section" th:if="${!isOAuthUser}">
+            <div class="profile-section-title">
+                <span class="icon">&#128274;</span> <span th:text="#{profile.changePassword}">Change Password</span>
+            </div>
+
+            <form th:action="@{/profile/change-password}" method="post">
+                <div class="profile-form-row">
+                    <div class="form-group">
+                        <label for="currentPassword" th:text="#{profile.currentPassword}">Current Password</label>
+                        <input type="password" id="currentPassword" name="currentPassword"
+                               class="form-control" placeholder="Enter current password" required>
+                    </div>
+                </div>
+                <div class="profile-form-row">
+                    <div class="form-group">
+                        <label for="newPassword" th:text="#{profile.newPassword}">New Password</label>
+                        <input type="password" id="newPassword" name="newPassword"
+                               class="form-control" placeholder="At least 6 characters" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword" th:text="#{profile.confirmNew}">Confirm New Password</label>
+                        <input type="password" id="confirmPassword" name="confirmPassword"
+                               class="form-control" placeholder="Re-enter new password" required>
+                    </div>
+                </div>
+                <button type="submit" class="profile-save-btn" th:text="#{profile.changeBtn}">Change Password</button>
+            </form>
+        </div>
+
+        <!-- Google account note -->
+        <div class="profile-section" th:if="${isOAuthUser}">
+            <div class="profile-section-title">
+                <span class="icon">&#128274;</span> <span th:text="#{profile.changePassword}">Password</span>
+            </div>
+            <p style="color: var(--gray); font-size: 0.88rem;" th:text="#{profile.googleNote}">
+                You signed in with Google. Password management is handled by your Google account.
+            </p>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

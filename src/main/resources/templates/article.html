@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${localizedTitle} + ' — Azubix'">Article — Azubix</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/ai-tutor.css}">
+    <link rel="stylesheet" th:href="@{/css/comments.css}">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+
+    <!-- Prism.js for syntax highlighting -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Navbar -->
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <div class="layout">
+        <!-- Sidebar -->
+        <div th:replace="~{fragments/sidebar :: sidebar}"></div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Breadcrumb -->
+            <div class="breadcrumb">
+                <a th:href="@{/}">Home</a>
+                <span class="separator">/</span>
+                <a th:href="@{/category/{id}(id=${article.topic.category.id})}"
+                   th:text="${article.topic.category.name}">Category</a>
+                <span class="separator">/</span>
+                <a th:href="@{/topic/{id}(id=${article.topic.id})}"
+                   th:text="${article.topic.title}">Topic</a>
+                <span class="separator">/</span>
+                <span th:text="${localizedTitle}">Article</span>
+            </div>
+
+            <!-- Article Header -->
+            <h1 th:text="${localizedTitle}" style="margin-bottom: 0.5rem;">Article Title</h1>
+
+            <!-- Article Meta -->
+            <div class="article-meta">
+                <span>
+                    &#128197;
+                    <span th:text="${#temporals.format(article.createdAt, 'MMMM dd, yyyy')}">
+                        January 01, 2025
+                    </span>
+                </span>
+                <span>
+                    &#9201;
+                    <span th:text="${readingTime}">5</span>
+                    <span th:text="#{article.minRead}">min read</span>
+                </span>
+                <span>
+                    &#128196; <span th:text="#{article.topic}">Topic</span>:
+                    <a th:href="@{/topic/{id}(id=${article.topic.id})}"
+                       th:text="${article.topic.title}">Topic</a>
+                </span>
+
+                <!-- Completion button -->
+                <span sec:authorize="isAuthenticated()">
+                    <form th:action="@{/progress/toggle/{id}(id=${article.topic.id})}" method="post"
+                          style="display: inline;">
+                        <button type="submit"
+                                th:class="${isCompleted != null && isCompleted} ? 'btn btn-success btn-sm' : 'btn btn-outline btn-sm'"
+                                th:text="${isCompleted != null && isCompleted} ? #{article.completed} : #{article.markComplete}">
+                            Mark Complete
+                        </button>
+                    </form>
+                </span>
+            </div>
+
+            <!-- Article Content — uses German version when locale=de and translation exists -->
+            <div class="article-content" id="articleContent" th:utext="${localizedContent}">
+                Article content will be rendered here as HTML.
+            </div>
+
+            <!-- ==============================
+                 AI TUTOR SECTION
+                 ============================== -->
+            <div class="ai-tutor">
+                <!-- Header -->
+                <div class="ai-tutor-header">
+                    <div class="ai-tutor-icon">&#9889;</div>
+                    <div class="ai-tutor-label">
+                        <h3 th:text="#{ai.title}">AI Tutor</h3>
+                        <p th:text="#{ai.subtitle}">Test your knowledge and explore this article deeper</p>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="ai-tabs">
+                    <button class="ai-tab active" onclick="switchTab('quiz')" th:text="#{ai.quiz}">Quiz me</button>
+                    <button class="ai-tab" onclick="switchTab('takeaways')" th:text="#{ai.takeaways}">Key takeaways</button>
+                    <button class="ai-tab" onclick="switchTab('simplify')" th:text="#{ai.simplify}">Simplify</button>
+                    <button class="ai-tab" onclick="switchTab('ask')" th:text="#{ai.ask}">Ask AI</button>
+                </div>
+
+                <!-- QUIZ TAB -->
+                <div id="tab-quiz" class="ai-tab-content active">
+                    <div id="quizArea">
+                        <div class="ai-loading" id="quizLoading">
+                            <div class="ai-loading-dots"><span></span><span></span><span></span></div>
+                            <span th:text="#{ai.generating}">Generating questions...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KEY TAKEAWAYS TAB -->
+                <div id="tab-takeaways" class="ai-tab-content">
+                    <div id="takeawaysArea">
+                        <div class="ai-loading" id="takeawaysLoading">
+                            <div class="ai-loading-dots"><span></span><span></span><span></span></div>
+                            <span th:text="#{ai.extracting}">Extracting key points...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SIMPLIFY TAB -->
+                <div id="tab-simplify" class="ai-tab-content">
+                    <div id="simplifyArea">
+                        <div class="ai-loading" id="simplifyLoading">
+                            <div class="ai-loading-dots"><span></span><span></span><span></span></div>
+                            <span th:text="#{ai.simplifying}">Simplifying content...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ASK AI TAB -->
+                <div id="tab-ask" class="ai-tab-content">
+                    <p class="ask-subtitle" th:text="#{ai.askSubtitle}">Ask anything about this article — the AI has read the full content.</p>
+                    <div class="ask-input-row">
+                        <input type="text" class="ask-input" id="askInput"
+                               th:placeholder="#{ai.askPlaceholder}"
+                               onkeydown="if(event.key==='Enter') askQuestion()">
+                        <button class="ask-send-btn" onclick="askQuestion()" id="askBtn" th:text="#{ai.askBtn}">Ask</button>
+                    </div>
+                    <div class="ask-suggestions" id="askSuggestions"></div>
+                    <div class="ask-response" id="askResponse"></div>
+                </div>
+            </div>
+            <!-- END AI TUTOR -->
+
+            <!-- ==============================
+                 COMMENTS / DISCUSSION SECTION
+                 ============================== -->
+            <section class="comments-section" id="comments">
+
+                <!-- Header -->
+                <div class="comments-header">
+                    <div class="comments-icon">&#128172;</div>
+                    <div>
+                        <h3 class="comments-title" th:text="#{comment.title}">Discussion</h3>
+                        <p class="comments-count" th:text="${#messages.msg('comment.count', commentCount)}">0 comments</p>
+                    </div>
+                </div>
+
+                <!-- New comment form (authenticated users) -->
+                <div sec:authorize="isAuthenticated()" class="comment-form-card">
+                    <form th:action="@{/article/{id}/comment(id=${article.id})}" method="post">
+                        <textarea name="content"
+                                  th:placeholder="#{comment.placeholder}"
+                                  required maxlength="2000"></textarea>
+                        <div class="comment-form-footer">
+                            <button type="submit" class="comment-submit-btn" th:text="#{comment.submit}">Post</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Login prompt (unauthenticated users) -->
+                <div sec:authorize="!isAuthenticated()" class="comment-login-prompt">
+                    <a th:href="@{/login}" th:text="#{nav.signin}">Sign In</a>
+                    <span th:text="#{comment.loginPrompt}">to join the discussion.</span>
+                </div>
+
+                <!-- Comment list -->
+                <div class="comments-list" th:if="${!#lists.isEmpty(comments)}">
+                    <div th:each="comment : ${comments}" class="comment-card">
+
+                        <!-- Comment header -->
+                        <div class="comment-header">
+                            <div class="comment-author">
+                                <!-- Avatar -->
+                                <img th:if="${comment.user.profileImage != null}"
+                                     th:src="@{/uploads/{img}(img=${comment.user.profileImage})}"
+                                     class="comment-avatar" alt="avatar">
+                                <img th:if="${comment.user.profileImage == null && comment.user.profileImageUrl != null}"
+                                     th:src="${comment.user.profileImageUrl}"
+                                     class="comment-avatar" alt="avatar">
+                                <div th:if="${comment.user.profileImage == null && comment.user.profileImageUrl == null}"
+                                     class="comment-avatar-placeholder"
+                                     th:text="${(comment.user.name != null ? comment.user.name : comment.user.email).substring(0,1).toUpperCase()}">
+                                    U
+                                </div>
+                                <!-- Name -->
+                                <span class="comment-name"
+                                      th:text="${comment.user.name != null && !comment.user.name.isEmpty() ? comment.user.name : comment.user.email}">
+                                    User
+                                </span>
+                            </div>
+                            <span class="comment-time"
+                                  th:text="${#temporals.format(comment.createdAt, 'MMM dd, yyyy HH:mm')}">
+                                Jan 01, 2025
+                            </span>
+                        </div>
+
+                        <!-- Comment body -->
+                        <div class="comment-body" th:text="${comment.content}">Content</div>
+
+                        <!-- Actions -->
+                        <div class="comment-actions">
+                            <button sec:authorize="isAuthenticated()"
+                                    class="comment-reply-btn"
+                                    th:onclick="'toggleReply(' + ${comment.id} + ')'"
+                                    th:text="#{comment.reply}">Reply</button>
+
+                            <!-- Delete: own comment or admin -->
+                            <form th:if="${currentUserId != null && (currentUserId == comment.user.id || currentUserRole == 'ADMIN')}"
+                                  th:action="@{/comment/{id}/delete(id=${comment.id})}" method="post"
+                                  style="display:inline;">
+                                <button type="submit" class="comment-delete-btn"
+                                        th:text="#{comment.delete}"
+                                        onclick="return confirm('Delete this comment?')">Delete</button>
+                            </form>
+                        </div>
+
+                        <!-- Inline reply form -->
+                        <div class="reply-form" th:id="'reply-' + ${comment.id}">
+                            <form th:action="@{/comment/{id}/reply(id=${comment.id})}" method="post">
+                                <input type="hidden" name="articleId" th:value="${article.id}">
+                                <textarea name="content"
+                                          th:placeholder="#{comment.replyPlaceholder}"
+                                          required maxlength="2000"></textarea>
+                                <div class="reply-form-footer">
+                                    <button type="button" class="reply-cancel-btn"
+                                            th:text="#{comment.cancel}"
+                                            th:onclick="'toggleReply(' + ${comment.id} + ')'">Cancel</button>
+                                    <button type="submit" class="reply-submit-btn"
+                                            th:text="#{comment.submit}">Post</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Replies -->
+                        <div class="replies-list" th:if="${!#lists.isEmpty(comment.replies)}">
+                            <div th:each="reply : ${comment.replies}" class="comment-card reply-card">
+                                <div class="comment-header">
+                                    <div class="comment-author">
+                                        <img th:if="${reply.user.profileImage != null}"
+                                             th:src="@{/uploads/{img}(img=${reply.user.profileImage})}"
+                                             class="comment-avatar" alt="avatar">
+                                        <img th:if="${reply.user.profileImage == null && reply.user.profileImageUrl != null}"
+                                             th:src="${reply.user.profileImageUrl}"
+                                             class="comment-avatar" alt="avatar">
+                                        <div th:if="${reply.user.profileImage == null && reply.user.profileImageUrl == null}"
+                                             class="comment-avatar-placeholder"
+                                             th:text="${(reply.user.name != null ? reply.user.name : reply.user.email).substring(0,1).toUpperCase()}">
+                                            U
+                                        </div>
+                                        <span class="comment-name"
+                                              th:text="${reply.user.name != null && !reply.user.name.isEmpty() ? reply.user.name : reply.user.email}">
+                                            User
+                                        </span>
+                                    </div>
+                                    <span class="comment-time"
+                                          th:text="${#temporals.format(reply.createdAt, 'MMM dd, yyyy HH:mm')}">
+                                        Jan 01, 2025
+                                    </span>
+                                </div>
+                                <div class="comment-body" th:text="${reply.content}">Reply content</div>
+                                <div class="comment-actions">
+                                    <form th:if="${currentUserId != null && (currentUserId == reply.user.id || currentUserRole == 'ADMIN')}"
+                                          th:action="@{/comment/{id}/delete(id=${reply.id})}" method="post"
+                                          style="display:inline;">
+                                        <button type="submit" class="comment-delete-btn"
+                                                th:text="#{comment.delete}"
+                                                onclick="return confirm('Delete this reply?')">Delete</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Empty state -->
+                <div th:if="${#lists.isEmpty(comments)}" class="comments-empty">
+                    <div class="comments-empty-icon">&#128172;</div>
+                    <p th:text="#{comment.empty}">No comments yet. Be the first to ask a question!</p>
+                </div>
+
+            </section>
+            <!-- END COMMENTS -->
+
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <div th:replace="~{fragments/footer :: footer}"></div>
+
+    <!-- Prism.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() { Prism.highlightAll(); });
+    </script>
+
+    <!-- i18n strings for JavaScript -->
+    <script th:inline="javascript">
+//     var i18n = {
+//         generating:     [[#{ai.generating}]],
+//         extracting:     [[#{ai.extracting}]],
+//         simplifying:    [[#{ai.simplifying}]],
+//         thinking:       [[#{ai.thinking}]],
+//         askBtn:         [[#{ai.askBtn}]],
+//         quizError:      [[#{ai.quizError}]],
+//         takeawayError:  [[#{ai.takeawayError}]],
+//         simplifyError:  [[#{ai.simplifyError}]],
+//         askError:       [[#{ai.askError}]],
+//         quizComplete:   [[#{ai.quizComplete}]],
+//         scored:         [[#{ai.scored}]],
+//         tryAgain:       [[#{ai.tryAgain}]],
+//         generatingNew:  [[#{ai.generatingNew}]],
+//         question:       [[#{ai.question}]],
+//         of:             [[#{ai.of}]],
+//         next:           [[#{ai.next}]],
+//         correct:        [[#{ai.correct}]],
+//         wrong:          [[#{ai.wrong}]],
+//         simplified:     [[#{ai.simplified}]],
+//         suggestion1:    [[#{ai.suggestion1}]],
+//         suggestion2:    [[#{ai.suggestion2}]],
+//         suggestion3:    [[#{ai.suggestion3}]],
+//         suggestion4:    [[#{ai.suggestion4}]],
+//         removeConfirm:  [[#{hl.removeConfirm}]],
+//         notePrompt:     [[#{hl.notePrompt}]],
+//         highlightError: [[#{hl.highlightError}]],
+//         noteError:      [[#{hl.noteError}]]
+//     };
+    </script>
+
+    <!-- ==============================
+         AI TUTOR — JavaScript
+         ============================== -->
+    <script>
+    // --- Get article text content (strip HTML tags) ---
+    var articleText = document.getElementById('articleContent').innerText.trim();
+
+    // --- State ---
+    var quizData = null;
+    var currentQuestion = 0;
+    var score = 0;
+    var tabsLoaded = { quiz: false, takeaways: false, simplify: false };
+
+    // ============================================================
+    // CLAUDE API CALL
+    // ============================================================
+    async function callClaude(prompt) {
+        var response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: 'claude-sonnet-4-20250514',
+                max_tokens: 1000,
+                messages: [{ role: 'user', content: prompt }]
+            })
+        });
+
+        var data = await response.json();
+        // Extract text from response
+        var text = data.content
+            .filter(function(item) { return item.type === 'text'; })
+            .map(function(item) { return item.text; })
+            .join('\n');
+        return text;
+    }
+
+    // ============================================================
+    // TAB SWITCHING
+    // ============================================================
+    function switchTab(name) {
+        // Hide all tab content
+        document.querySelectorAll('.ai-tab-content').forEach(function(el) {
+            el.classList.remove('active');
+        });
+        // Remove active from all tabs
+        document.querySelectorAll('.ai-tab').forEach(function(el) {
+            el.classList.remove('active');
+        });
+        // Show selected tab
+        document.getElementById('tab-' + name).classList.add('active');
+        event.target.classList.add('active');
+
+        // Load content on first click
+        if (name === 'quiz' && !tabsLoaded.quiz) loadQuiz();
+        if (name === 'takeaways' && !tabsLoaded.takeaways) loadTakeaways();
+        if (name === 'simplify' && !tabsLoaded.simplify) loadSimplify();
+        if (name === 'ask') loadSuggestions();
+    }
+
+    // ============================================================
+    // QUIZ
+    // ============================================================
+    async function loadQuiz() {
+        tabsLoaded.quiz = true;
+        var prompt = 'Based on the following article content, generate exactly 5 multiple-choice quiz questions to test understanding. Each question should have 4 options with exactly one correct answer.\n\nRespond ONLY with a JSON array, no markdown, no backticks, no explanation. Format:\n[{"question":"...","options":["A","B","C","D"],"correct":0,"explanation":"..."}]\n\nwhere "correct" is the 0-based index of the correct option.\n\nArticle:\n' + articleText.substring(0, 4000);
+
+        try {
+            var text = await callClaude(prompt);
+            // Clean response — remove any markdown fences
+            text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+            quizData = JSON.parse(text);
+            currentQuestion = 0;
+            score = 0;
+            renderQuestion();
+        } catch (e) {
+            document.getElementById('quizArea').innerHTML =
+                '<p style="color: var(--gray); text-align: center; padding: 2rem;">' + i18n.quizError + '</p>';
+        }
+    }
+
+    function renderQuestion() {
+        if (currentQuestion >= quizData.length) {
+            renderScore();
+            return;
+        }
+
+        var q = quizData[currentQuestion];
+        var html = '<div class="quiz-card">';
+        html += '<div class="quiz-question">' + escapeHtml(q.question) + '</div>';
+        html += '<div class="quiz-options">';
+
+        q.options.forEach(function(opt, i) {
+            html += '<div class="quiz-opt" data-index="' + i + '" onclick="selectAnswer(this, ' + i + ', ' + q.correct + ')">';
+            html += '<div class="quiz-radio"></div>';
+            html += escapeHtml(opt);
+            html += '</div>';
+        });
+
+        html += '</div>';
+        html += '<div class="quiz-feedback" id="quizFeedback"></div>';
+        html += '<div class="quiz-footer">';
+        html += '<span class="quiz-counter">' + i18n.question + ' ' + (currentQuestion + 1) + ' ' + i18n.of + ' ' + quizData.length + '</span>';
+        html += '<button class="quiz-next-btn" id="nextBtn" onclick="nextQuestion()" disabled>' + i18n.next + '</button>';
+        html += '</div></div>';
+
+        document.getElementById('quizArea').innerHTML = html;
+    }
+
+    function selectAnswer(el, selected, correct) {
+        // Prevent re-clicking
+        if (document.querySelector('.quiz-opt.correct') || document.querySelector('.quiz-opt.wrong')) return;
+
+        var opts = document.querySelectorAll('.quiz-opt');
+        var feedback = document.getElementById('quizFeedback');
+
+        if (selected === correct) {
+            el.classList.add('correct');
+            feedback.className = 'quiz-feedback correct';
+            feedback.innerHTML = '&#10004; ' + i18n.correct + ' ' + escapeHtml(quizData[currentQuestion].explanation);
+            score++;
+        } else {
+            el.classList.add('wrong');
+            opts[correct].classList.add('correct');
+            feedback.className = 'quiz-feedback wrong';
+            feedback.innerHTML = '&#10008; ' + i18n.wrong + ' ' + escapeHtml(quizData[currentQuestion].explanation);
+        }
+
+        // Disable other options
+        opts.forEach(function(o) {
+            if (!o.classList.contains('correct') && !o.classList.contains('wrong')) {
+                o.classList.add('disabled');
+            }
+        });
+
+        document.getElementById('nextBtn').disabled = false;
+    }
+
+    function nextQuestion() {
+        currentQuestion++;
+        renderQuestion();
+    }
+
+    function renderScore() {
+        var pct = Math.round((score / quizData.length) * 100);
+        var cls = pct >= 80 ? 'good' : (pct >= 50 ? 'okay' : 'bad');
+
+        var html = '<div class="quiz-score">';
+        html += '<div class="quiz-score-circle ' + cls + '">' + score + '/' + quizData.length + '</div>';
+        html += '<h3 style="margin-bottom: 0.25rem;">' + i18n.quizComplete + '</h3>';
+        html += '<p style="color: var(--gray); font-size: 0.88rem;">' + i18n.scored + ' ' + pct + '%</p>';
+        html += '<button class="quiz-retry-btn" onclick="retryQuiz()">' + i18n.tryAgain + '</button>';
+        html += '</div>';
+
+        document.getElementById('quizArea').innerHTML = html;
+    }
+
+    function retryQuiz() {
+        tabsLoaded.quiz = false;
+        document.getElementById('quizArea').innerHTML =
+            '<div class="ai-loading"><div class="ai-loading-dots"><span></span><span></span><span></span></div>' + i18n.generatingNew + '</div>';
+        loadQuiz();
+    }
+
+    // ============================================================
+    // KEY TAKEAWAYS
+    // ============================================================
+    async function loadTakeaways() {
+        tabsLoaded.takeaways = true;
+
+        var prompt = 'Read the following article and extract 4-6 key takeaways. Each should be a concise, clear sentence.\n\nRespond ONLY with a JSON array of strings, no markdown, no backticks:\n["takeaway 1","takeaway 2",...]\n\nArticle:\n' + articleText.substring(0, 4000);
+
+        try {
+            var text = await callClaude(prompt);
+            text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+            var takeaways = JSON.parse(text);
+
+            var html = '<div class="takeaway-list">';
+            takeaways.forEach(function(item) {
+                html += '<div class="takeaway-item">';
+                html += '<div class="takeaway-bullet"></div>';
+                html += '<div>' + escapeHtml(item) + '</div>';
+                html += '</div>';
+            });
+            html += '</div>';
+
+            document.getElementById('takeawaysArea').innerHTML = html;
+        } catch (e) {
+            document.getElementById('takeawaysArea').innerHTML =
+                '<p style="color: var(--gray); text-align: center; padding: 2rem;">' + i18n.takeawayError + '</p>';
+        }
+    }
+
+    // ============================================================
+    // SIMPLIFY
+    // ============================================================
+    async function loadSimplify() {
+        tabsLoaded.simplify = true;
+
+        var prompt = 'Rewrite the following article in simple, plain language that a beginner can understand. Use analogies and everyday examples. Keep it concise — about 150-200 words. Do not use markdown formatting.\n\nArticle:\n' + articleText.substring(0, 4000);
+
+        try {
+            var text = await callClaude(prompt);
+
+            var html = '<div class="simplify-card">';
+            html += '<div class="simplify-badge">' + i18n.simplified + '</div>';
+            html += '<div class="simplify-text">' + escapeHtml(text).replace(/\n/g, '<br>') + '</div>';
+            html += '</div>';
+
+            document.getElementById('simplifyArea').innerHTML = html;
+        } catch (e) {
+            document.getElementById('simplifyArea').innerHTML =
+                '<p style="color: var(--gray); text-align: center; padding: 2rem;">' + i18n.simplifyError + '</p>';
+        }
+    }
+
+    // ============================================================
+    // ASK AI
+    // ============================================================
+    function loadSuggestions() {
+        // Only generate once
+        if (document.getElementById('askSuggestions').children.length > 0) return;
+
+        var suggestions = [
+            i18n.suggestion1,
+            i18n.suggestion2,
+            i18n.suggestion3,
+            i18n.suggestion4
+        ];
+
+        var html = '';
+        suggestions.forEach(function(s) {
+            html += '<button class="ask-chip" onclick="askWithText(\'' + s.replace(/'/g, "\\'") + '\')">' + s + '</button>';
+        });
+        document.getElementById('askSuggestions').innerHTML = html;
+    }
+
+    function askWithText(text) {
+        document.getElementById('askInput').value = text;
+        askQuestion();
+    }
+
+    async function askQuestion() {
+        var input = document.getElementById('askInput');
+        var question = input.value.trim();
+        if (!question) return;
+
+        var btn = document.getElementById('askBtn');
+        var responseDiv = document.getElementById('askResponse');
+
+        btn.disabled = true;
+        btn.textContent = i18n.thinking;
+        responseDiv.className = 'ask-response visible';
+        responseDiv.innerHTML = '<div class="ai-loading"><div class="ai-loading-dots"><span></span><span></span><span></span></div>' + i18n.thinking + '</div>';
+
+        var prompt = 'You are a helpful tutor. A student is reading an article and has a question. Answer based on the article content. Be clear and concise. If the question is unrelated to the article, politely redirect.\n\nArticle content:\n' + articleText.substring(0, 3500) + '\n\nStudent question: ' + question;
+
+        try {
+            var text = await callClaude(prompt);
+            responseDiv.innerHTML = escapeHtml(text).replace(/\n/g, '<br>');
+        } catch (e) {
+            responseDiv.innerHTML = '<p style="color: var(--danger);">' + i18n.askError + '</p>';
+        }
+
+        btn.disabled = false;
+        btn.textContent = i18n.askBtn;
+        input.value = '';
+    }
+
+    // ============================================================
+    // UTILITIES
+    // ============================================================
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(text));
+        return div.innerHTML;
+    }
+
+    // Auto-load quiz on page load
+    window.addEventListener('load', function() {
+        loadQuiz();
+        loadSuggestions();
+    });
+
+ // ======================================================
+ // STATE
+ // ======================================================
+ let selectedRange = null;
+ let isSelecting = false;
+
+ // ======================================================
+ // SELECTION DETECTION (NO RIGHT CLICK)
+ // ======================================================
+ const article = document.getElementById('articleContent');
+
+ // Start selecting
+ article.addEventListener('mousedown', () => {
+     isSelecting = true;
+ });
+
+ // End selecting
+ article.addEventListener('mouseup', () => {
+     if (!isSelecting) return;
+     isSelecting = false;
+
+     setTimeout(() => {
+         const selection = window.getSelection();
+
+         if (!selection.rangeCount) return;
+
+         const text = selection.toString().trim();
+         if (!text) return;
+
+         selectedRange = selection.getRangeAt(0);
+
+         const rect = selectedRange.getBoundingClientRect();
+
+         showHighlightMenu(
+             rect.left + window.scrollX + rect.width / 2,
+             rect.top + window.scrollY - 50
+         );
+     }, 60);
+ });
+
+ // ======================================================
+ // MENU SHOW / HIDE
+ // ======================================================
+ function showHighlightMenu(x, y) {
+     const menu = document.getElementById('highlightMenu');
+
+     menu.style.left = x + 'px';
+     menu.style.top = y + 'px';
+     menu.style.display = 'flex';
+
+     requestAnimationFrame(() => {
+         menu.classList.add('show');
+     });
+ }
+
+ // Hide menu smartly
+ document.addEventListener('mousedown', function (e) {
+     const menu = document.getElementById('highlightMenu');
+
+     if (menu.contains(e.target)) return;
+
+     // If user is selecting text, don't hide
+     if (window.getSelection().toString().length > 0) return;
+
+     menu.classList.remove('show');
+
+     setTimeout(() => {
+         menu.style.display = 'none';
+     }, 150);
+ });
+
+ // Prevent losing selection when clicking buttons
+ document.querySelectorAll('.hl-btn').forEach(btn => {
+     btn.addEventListener('mousedown', function(e) {
+         e.preventDefault();
+     });
+ });
+
+ // ======================================================
+ // APPLY HIGHLIGHT
+ // ======================================================
+ function applyHighlight() {
+     if (!selectedRange) return;
+
+     try {
+         const span = document.createElement('span');
+         span.className = 'highlight';
+
+         selectedRange.surroundContents(span);
+
+         clearSelection();
+         saveHighlights();
+     } catch (e) {
+         alert(i18n.highlightError);
+     }
+ }
+
+ // ======================================================
+ // ADD NOTE
+ // ======================================================
+ function addNote() {
+     if (!selectedRange) return;
+
+     const note = prompt(i18n.notePrompt);
+     if (!note) return;
+
+     try {
+         const span = document.createElement('span');
+         span.className = 'highlight highlight-note';
+         span.setAttribute('data-note', note);
+
+         span.onclick = function (e) {
+             e.stopPropagation();
+             alert(this.getAttribute('data-note'));
+         };
+
+         selectedRange.surroundContents(span);
+
+         clearSelection();
+         saveHighlights();
+     } catch (e) {
+         alert(i18n.noteError);
+     }
+ }
+
+ // ======================================================
+ // REMOVE HIGHLIGHT
+ // ======================================================
+ article.addEventListener('click', function (e) {
+     if (e.target.classList.contains('highlight')) {
+         if (confirm(i18n.removeConfirm)) {
+             const parent = e.target.parentNode;
+
+             parent.replaceChild(
+                 document.createTextNode(e.target.textContent),
+                 e.target
+             );
+
+             parent.normalize();
+             saveHighlights();
+         }
+     }
+ });
+
+ // ======================================================
+ // CLEAR SELECTION
+ // ======================================================
+ function clearSelection() {
+     const selection = window.getSelection();
+     selection.removeAllRanges();
+
+     const menu = document.getElementById('highlightMenu');
+     menu.classList.remove('show');
+
+     setTimeout(() => {
+         menu.style.display = 'none';
+     }, 150);
+ }
+
+ // ======================================================
+ // SAVE / LOAD (LOCAL STORAGE)
+ // ======================================================
+ function saveHighlights() {
+    var articleId = '[[${article.id}]]';
+    localStorage.setItem("articleHighlights_" + articleId, article.innerHTML);
+}
+
+function loadHighlights() {
+    var articleId = '[[${article.id}]]';
+    var saved = localStorage.getItem("articleHighlights_" + articleId);
+    if (saved) { article.innerHTML = saved; }
+}
+
+ // ======================================================
+ // INIT
+ // ======================================================
+ window.addEventListener('load', function () {
+     loadHighlights();
+ });
+
+ // ======================================================
+ // REPLY TOGGLE
+ // ======================================================
+ function toggleReply(commentId) {
+     var form = document.getElementById('reply-' + commentId);
+     if (form) {
+         form.classList.toggle('open');
+         if (form.classList.contains('open')) {
+             form.querySelector('textarea').focus();
+         }
+     }
+ }
+
+    </script>
+ <div id="highlightMenu" class="highlight-menu">
+    <button class="hl-btn" onclick="applyHighlight()" title="Highlight">
+        ✨
+    </button>
+    <button class="hl-btn" onclick="addNote()" title="Add note">
+        📝
+    </button>
+    <button class="hl-btn danger" onclick="clearSelection()" title="Cancel">
+        ✕
+    </button>
+</div>
+
+</body>
+</html>

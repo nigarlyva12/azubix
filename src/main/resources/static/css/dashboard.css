@@ -1,0 +1,395 @@
+@charset "UTF-8";
+/* ============================================================
+   CODEWERK — User Dashboard
+   ============================================================ */
+
+.dash-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2.5rem 2rem 4rem;
+}
+
+/* ============================================================
+   GREETING HEADER
+   ============================================================ */
+.dash-greet {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+    opacity: 0;
+    animation: dashFadeUp 0.6s ease 0.1s forwards;
+}
+
+.dash-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--primary-light);
+    flex-shrink: 0;
+}
+
+.dash-avatar-placeholder {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.dash-greet-text h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin: 0;
+}
+
+.dash-greet-sub {
+    font-size: 0.88rem;
+    color: var(--gray);
+    margin-top: 0.15rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.dash-streak-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--accent-dark);
+    background: rgba(45, 212, 191, 0.1);
+    border: 1px solid rgba(45, 212, 191, 0.2);
+    padding: 0.2rem 0.55rem;
+    border-radius: 4px;
+}
+
+/* ============================================================
+   STATS ROW
+   ============================================================ */
+.dash-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.85rem;
+    margin-bottom: 1.75rem;
+}
+
+.dash-stat {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    text-align: center;
+    opacity: 0;
+    animation: dashFadeUp 0.5s ease forwards;
+    transition: transform 0.25s, box-shadow 0.25s;
+}
+
+.dash-stat:nth-child(1) { animation-delay: 0.15s; }
+.dash-stat:nth-child(2) { animation-delay: 0.2s; }
+.dash-stat:nth-child(3) { animation-delay: 0.25s; }
+.dash-stat:nth-child(4) { animation-delay: 0.3s; }
+
+.dash-stat:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+}
+
+.dash-stat-icon {
+    font-size: 1.3rem;
+    margin-bottom: 0.5rem;
+}
+
+.dash-stat-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--dark);
+}
+
+.dash-stat-label {
+    font-size: 0.75rem;
+    color: var(--gray);
+    margin-top: 0.2rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* ============================================================
+   TWO-COLUMN ROW
+   ============================================================ */
+.dash-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+}
+
+/* ============================================================
+   CARD BASE
+   ============================================================ */
+.dash-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.5rem;
+    opacity: 0;
+    animation: dashFadeUp 0.5s ease 0.35s forwards;
+}
+
+.dash-card-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.dash-card-title .card-icon {
+    font-size: 1rem;
+}
+
+/* ============================================================
+   PROGRESS RINGS (SVG)
+   ============================================================ */
+.dash-rings {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.dash-ring-item {
+    text-align: center;
+}
+
+.dash-ring-label {
+    font-size: 0.72rem;
+    color: var(--gray);
+    margin-top: 0.4rem;
+    max-width: 80px;
+    word-wrap: break-word;
+}
+
+/* Ring animation */
+.dash-ring-circle {
+    transition: stroke-dashoffset 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* ============================================================
+   ACTIVITY FEED
+   ============================================================ */
+.dash-activity {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.dash-activity li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+    color: var(--dark);
+}
+
+.dash-activity li:last-child {
+    border-bottom: none;
+}
+
+.dash-act-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-top: 0.35rem;
+    flex-shrink: 0;
+}
+
+.dash-act-dot.read { background: var(--accent); }
+.dash-act-dot.completed { background: var(--primary); }
+.dash-act-dot.started { background: var(--secondary); }
+
+.dash-act-name {
+    font-weight: 600;
+}
+
+.dash-act-time {
+    font-size: 0.72rem;
+    color: var(--gray);
+    margin-top: 0.15rem;
+}
+
+.dash-activity-empty {
+    text-align: center;
+    padding: 1.5rem;
+    color: var(--gray);
+    font-size: 0.85rem;
+}
+
+/* ============================================================
+   CONTINUE LEARNING
+   ============================================================ */
+.dash-continue {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.85rem;
+}
+
+.dash-cont-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.3s ease;
+    display: block;
+}
+
+.dash-cont-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+    border-color: var(--primary-light);
+}
+
+.dash-cont-tag {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--primary);
+    background: var(--primary-light);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    margin-bottom: 0.6rem;
+    letter-spacing: 0.03em;
+}
+
+.dash-cont-title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 0.65rem;
+}
+
+.dash-cont-bar {
+    height: 5px;
+    background: var(--light-gray);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.dash-cont-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    transition: width 0.8s ease;
+}
+
+.dash-cont-pct {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--gray);
+    margin-top: 0.35rem;
+}
+
+.dash-continue-empty {
+    text-align: center;
+    padding: 1.5rem;
+    color: var(--gray);
+    font-size: 0.85rem;
+    grid-column: 1 / -1;
+}
+
+/* ============================================================
+   WEEKLY STREAK
+   ============================================================ */
+.dash-week {
+    display: flex;
+    gap: 0.4rem;
+    justify-content: center;
+    margin-top: 0.5rem;
+}
+
+.dash-week-day {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 600;
+    transition: transform 0.2s;
+}
+
+.dash-week-day:hover {
+    transform: scale(1.1);
+}
+
+.dash-week-on {
+    background: rgba(45, 212, 191, 0.12);
+    color: var(--accent-dark);
+    border: 1px solid rgba(45, 212, 191, 0.2);
+}
+
+.dash-week-off {
+    background: var(--light-gray);
+    color: var(--gray);
+    border: 1px solid var(--border);
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+@keyframes dashFadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 768px) {
+    .dash-page {
+        padding: 1.5rem 1rem 3rem;
+    }
+
+    .dash-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .dash-row {
+        grid-template-columns: 1fr;
+    }
+
+    .dash-continue {
+        grid-template-columns: 1fr;
+    }
+
+    .dash-greet h1 {
+        font-size: 1.2rem;
+    }
+
+    .dash-week-day {
+        width: 30px;
+        height: 30px;
+    }
+}

@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Exam Questions — ' + ${topic.title} + ' — Admin'">Exam Questions</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
+    <style>
+        /* ── Inline admin-question extras ──────────────────── */
+        .aq-page { max-width: 880px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
+
+        .aq-back {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            font-size: 0.82rem; color: #6a6a8a; text-decoration: none;
+            margin-bottom: 1.5rem; transition: color 0.2s;
+        }
+        .aq-back:hover { color: #a78bfa; }
+
+        .aq-header { margin-bottom: 2rem; }
+        .aq-header h1 { font-size: 1.5rem; font-weight: 700; color: #eeeef8; margin: 0 0 0.2rem; }
+        .aq-header p  { font-size: 0.85rem; color: #5a5a7a; }
+
+        /* Add form card */
+        .aq-form-card {
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 16px; padding: 1.75rem 1.75rem; margin-bottom: 2.5rem;
+        }
+        .aq-form-title {
+            font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; font-weight: 700;
+            letter-spacing: 0.15em; text-transform: uppercase; color: #7c6cf0;
+            margin-bottom: 1.25rem;
+        }
+        .aq-field { margin-bottom: 1.1rem; }
+        .aq-label {
+            display: block; font-size: 0.8rem; font-weight: 600; color: #7a7a9a;
+            margin-bottom: 0.35rem; letter-spacing: 0.03em;
+        }
+        .aq-input, .aq-select, .aq-textarea {
+            width: 100%; padding: 0.65rem 0.9rem; border-radius: 9px;
+            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
+            color: #e0e0f0; font-size: 0.9rem; font-family: 'DM Sans', sans-serif;
+            outline: none; transition: border-color 0.2s, box-shadow 0.2s; box-sizing: border-box;
+        }
+        .aq-input:focus, .aq-select:focus, .aq-textarea:focus {
+            border-color: rgba(124,108,240,0.45);
+            box-shadow: 0 0 0 3px rgba(124,108,240,0.1);
+        }
+        .aq-textarea { min-height: 80px; resize: vertical; }
+        .aq-select option { background: #1a1a2e; }
+
+        /* MC options grid */
+        .aq-options-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; margin-top: 0.5rem;
+        }
+        .aq-option-wrap { display: flex; align-items: center; gap: 0.5rem; }
+        .aq-option-letter {
+            width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
+            background: rgba(124,108,240,0.1); border: 1px solid rgba(124,108,240,0.2);
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; font-weight: 700; color: #a78bfa;
+        }
+
+        .aq-form-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+        .aq-form-row .aq-field { flex: 1; min-width: 200px; }
+
+        .aq-submit-btn {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.65rem 1.75rem; border-radius: 10px; border: none; cursor: pointer;
+            font-size: 0.9rem; font-weight: 700; font-family: 'DM Sans', sans-serif;
+            background: linear-gradient(135deg, #7c6cf0, #2dd4bf); color: #fff;
+            box-shadow: 0 4px 16px rgba(124,108,240,0.35);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .aq-submit-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(124,108,240,0.5); }
+
+        /* Question list */
+        .aq-list { display: flex; flex-direction: column; gap: 0.85rem; }
+        .aq-item {
+            background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 13px; padding: 1.1rem 1.25rem;
+            display: flex; align-items: flex-start; gap: 1rem;
+        }
+        .aq-item-num {
+            font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 700;
+            color: #4a4a65; flex-shrink: 0; padding-top: 2px;
+        }
+        .aq-item-body { flex: 1; min-width: 0; }
+        .aq-item-q { font-size: 0.92rem; font-weight: 600; color: #d8d8f0; margin-bottom: 0.3rem; line-height: 1.4; }
+        .aq-item-meta { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+        .aq-type-badge {
+            font-size: 0.6rem; background: rgba(124,108,240,0.1);
+            border: 1px solid rgba(124,108,240,0.18); color: #a78bfa;
+            border-radius: 20px; padding: 0.1rem 0.55rem; letter-spacing: 0.06em; text-transform: uppercase;
+        }
+        .aq-correct-badge {
+            font-size: 0.72rem; color: #2dd4bf;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .aq-delete-btn {
+            flex-shrink: 0; padding: 0.4rem 0.8rem; border-radius: 8px;
+            background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.2);
+            color: #f87171; font-size: 0.8rem; font-weight: 600;
+            font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.18s;
+        }
+        .aq-delete-btn:hover { background: rgba(248,113,113,0.15); }
+
+        /* Flash messages */
+        .aq-flash {
+            padding: 0.8rem 1.1rem; border-radius: 10px; margin-bottom: 1.5rem;
+            font-size: 0.88rem; font-weight: 600;
+        }
+        .aq-flash-ok  { background: rgba(45,212,191,0.1); border: 1px solid rgba(45,212,191,0.25); color: #2dd4bf; }
+        .aq-flash-err { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25); color: #f87171; }
+
+        /* Section heading */
+        .aq-section-heading {
+            font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; font-weight: 700;
+            letter-spacing: 0.15em; text-transform: uppercase; color: #4a4a65;
+            margin-bottom: 0.9rem; padding-bottom: 0.55rem;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .aq-count-pill {
+            font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+            background: rgba(124,108,240,0.1); border: 1px solid rgba(124,108,240,0.18);
+            color: #a78bfa; border-radius: 20px; padding: 0.1rem 0.6rem;
+        }
+
+        /* Hidden MC / TF / Fill sections – shown by JS */
+        .mc-section, .tf-section, .fill-section { display: none; }
+        html:not([data-theme="dark"]) .aq-page { color: #1a1a2e; }
+        html:not([data-theme="dark"]) .aq-header h1 { color: #1a1a2e; }
+        html:not([data-theme="dark"]) .aq-form-card { background:#fff; border-color:#e2e8f0; }
+        html:not([data-theme="dark"]) .aq-input,
+        html:not([data-theme="dark"]) .aq-select,
+        html:not([data-theme="dark"]) .aq-textarea { background:#f8f9fb; border-color:#e2e8f0; color:#1a1a2e; }
+        html:not([data-theme="dark"]) .aq-item { background:#fff; border-color:#e2e8f0; }
+        html:not([data-theme="dark"]) .aq-item-q { color:#1a1a2e; }
+    </style>
+</head>
+<body>
+
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="aq-page">
+
+    <a th:href="@{/admin/topics}" class="aq-back">← Back to Topics</a>
+
+    <div class="aq-header">
+        <h1>📝 Exam Questions</h1>
+        <p th:text="'Managing questions for: ' + ${topic.title}">Topic</p>
+    </div>
+
+    <!-- Flash messages -->
+    <div th:if="${success}" class="aq-flash aq-flash-ok" th:text="${success}"></div>
+    <div th:if="${error}"   class="aq-flash aq-flash-err" th:text="${error}"></div>
+
+    <!-- ── Add question form ───────────────────────────────────── -->
+    <div class="aq-form-card">
+        <div class="aq-form-title">✦ Add New Question</div>
+        <form th:action="@{/admin/topics/{topicId}/questions/create(topicId=${topic.id})}"
+              method="post" id="qForm">
+
+            <!-- Question text -->
+            <div class="aq-field">
+                <label class="aq-label">Question Text</label>
+                <textarea class="aq-textarea" name="text" placeholder="Enter the question…" required></textarea>
+            </div>
+
+            <!-- Type + Answer row -->
+            <div class="aq-form-row">
+                <div class="aq-field">
+                    <label class="aq-label">Question Type</label>
+                    <select class="aq-select" name="type" id="typeSelect" onchange="onTypeChange(this.value)" required>
+                        <option value="MULTIPLE_CHOICE">Multiple Choice</option>
+                        <option value="TRUE_FALSE">True / False</option>
+                        <option value="FILL_BLANK">Fill in the Blank</option>
+                    </select>
+                </div>
+
+                <!-- Correct Answer for TF / Fill / MC (index) -->
+                <div class="aq-field">
+                    <label class="aq-label">Correct Answer</label>
+                    <!-- MC: index 0-3 -->
+                    <select class="aq-select mc-section" name="correctAnswer" id="mcCorrect">
+                        <option value="0">A (option 1)</option>
+                        <option value="1">B (option 2)</option>
+                        <option value="2">C (option 3)</option>
+                        <option value="3">D (option 4)</option>
+                    </select>
+                    <!-- TF -->
+                    <select class="aq-select tf-section" id="tfCorrect">
+                        <option value="true">True</option>
+                        <option value="false">False</option>
+                    </select>
+                    <!-- Fill blank -->
+                    <input type="text" class="aq-input fill-section" id="fillCorrect"
+                           placeholder="Expected answer…">
+                    <!-- Hidden field wired by JS -->
+                    <input type="hidden" name="correctAnswer" id="correctAnswerHidden">
+                </div>
+            </div>
+
+            <!-- MC options (only shown for MC) -->
+            <div class="aq-field mc-section" id="mcOptionsField">
+                <label class="aq-label">Answer Options</label>
+                <div class="aq-options-grid">
+                    <div class="aq-option-wrap">
+                        <div class="aq-option-letter">A</div>
+                        <input type="text" class="aq-input" name="options" placeholder="Option A" required>
+                    </div>
+                    <div class="aq-option-wrap">
+                        <div class="aq-option-letter">B</div>
+                        <input type="text" class="aq-input" name="options" placeholder="Option B" required>
+                    </div>
+                    <div class="aq-option-wrap">
+                        <div class="aq-option-letter">C</div>
+                        <input type="text" class="aq-input" name="options" placeholder="Option C">
+                    </div>
+                    <div class="aq-option-wrap">
+                        <div class="aq-option-letter">D</div>
+                        <input type="text" class="aq-input" name="options" placeholder="Option D">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Explanation -->
+            <div class="aq-field">
+                <label class="aq-label">Explanation <span style="color:#4a4a65;font-weight:400;">(optional)</span></label>
+                <textarea class="aq-textarea" name="explanation"
+                          placeholder="Explain why this answer is correct…" style="min-height:60px;"></textarea>
+            </div>
+
+            <button type="submit" class="aq-submit-btn">＋ Add Question</button>
+        </form>
+    </div>
+
+    <!-- ── Existing questions ──────────────────────────────────── -->
+    <div class="aq-section-heading">
+        <span>Existing Questions</span>
+        <span class="aq-count-pill" th:text="${#lists.size(questions)} + ' total'">0 total</span>
+    </div>
+
+    <div th:if="${#lists.isEmpty(questions)}"
+         style="text-align:center;padding:2.5rem;color:#4a4a65;font-size:0.88rem;">
+        No questions yet — add one above.
+    </div>
+
+    <div class="aq-list">
+        <div th:each="q, iter : ${questions}" class="aq-item">
+            <div class="aq-item-num" th:text="'Q' + (${iter.index + 1})">Q1</div>
+            <div class="aq-item-body">
+                <div class="aq-item-q" th:text="${q.text}">Question text</div>
+                <div class="aq-item-meta">
+                    <span class="aq-type-badge"
+                          th:text="${q.type == T(com.learnhub.entity.Question.QuestionType).MULTIPLE_CHOICE} ? 'MC' :
+                                    (${q.type == T(com.learnhub.entity.Question.QuestionType).TRUE_FALSE} ? 'T/F' : 'Fill')">
+                        Type
+                    </span>
+                    <span class="aq-correct-badge"
+                          th:text="'✓ ' + ${q.correctAnswer}">Correct</span>
+                </div>
+            </div>
+            <form th:action="@{/admin/topics/{tid}/questions/delete/{qid}(tid=${topic.id},qid=${q.id})}"
+                  method="post" style="flex-shrink:0;">
+                <button type="submit" class="aq-delete-btn"
+                        onclick="return confirm('Delete this question?')">Delete</button>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+
+<script>
+function onTypeChange(type) {
+    // Hide/show answer inputs
+    document.querySelectorAll('.mc-section').forEach(function(el) {
+        el.style.display = type === 'MULTIPLE_CHOICE' ? '' : 'none';
+    });
+    document.querySelectorAll('.tf-section').forEach(function(el) {
+        el.style.display = type === 'TRUE_FALSE' ? '' : 'none';
+    });
+    document.querySelectorAll('.fill-section').forEach(function(el) {
+        el.style.display = type === 'FILL_BLANK' ? '' : 'none';
+    });
+    // MC options required
+    document.querySelectorAll('#mcOptionsField input').forEach(function(inp, i) {
+        inp.required = type === 'MULTIPLE_CHOICE' && i < 2;
+    });
+}
+
+// Wire hidden correctAnswer field on submit
+document.getElementById('qForm').addEventListener('submit', function(e) {
+    const type = document.getElementById('typeSelect').value;
+    let val = '';
+    if (type === 'MULTIPLE_CHOICE') {
+        val = document.getElementById('mcCorrect').value;
+    } else if (type === 'TRUE_FALSE') {
+        val = document.getElementById('tfCorrect').value;
+    } else {
+        val = document.getElementById('fillCorrect').value;
+    }
+    document.getElementById('correctAnswerHidden').value = val;
+    // Remove unused select names so they don't collide
+    document.getElementById('mcCorrect').removeAttribute('name');
+    document.getElementById('tfCorrect').removeAttribute('name');
+    document.getElementById('fillCorrect').removeAttribute('name');
+});
+
+// Init on load
+onTypeChange('MULTIPLE_CHOICE');
+</script>
+</body>
+</html>

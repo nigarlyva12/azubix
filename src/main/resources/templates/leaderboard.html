@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="#{lb.pageTitle}">Leaderboard — CodeWerk</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/gamification.css}">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <div class="lb-page">
+
+        <!-- ── Banner ─────────────────────────────────────────────────── -->
+        <div class="lb-banner">
+            <div class="lb-banner-inner">
+                <div class="lb-banner-icon">🏆</div>
+                <h1 th:text="#{lb.title}">Leaderboard</h1>
+                <p th:text="#{lb.subtitle}">Top learners ranked by XP earned</p>
+            </div>
+        </div>
+
+        <!-- ── Podium (top 3) ─────────────────────────────────────────── -->
+        <div class="lb-podium" th:if="${#lists.size(entries) >= 1}">
+
+            <!-- 2nd place -->
+            <div class="lb-podium-spot lb-spot-2"
+                 th:if="${#lists.size(entries) >= 2}"
+                 th:with="e=${entries[1]}"
+                 th:classappend="${currentUserId != null and e['user'].id == currentUserId} ? ' lb-you' : ''">
+                <div class="lb-pod-avatar" th:text="${e['displayName'].substring(0,1).toUpperCase()}">A</div>
+                <div class="lb-pod-name" th:text="${e['displayName']}">Name</div>
+                <div class="lb-pod-xp">
+                    <span th:text="${e['xp']}">0</span> <span th:text="#{lb.xp}">XP</span>
+                </div>
+                <div class="lb-pod-medal">🥈</div>
+                <div class="lb-pod-base lb-base-2">2</div>
+            </div>
+
+            <!-- 1st place -->
+            <div class="lb-podium-spot lb-spot-1"
+                 th:with="e=${entries[0]}"
+                 th:classappend="${currentUserId != null and e['user'].id == currentUserId} ? ' lb-you' : ''">
+                <div class="lb-pod-crown">👑</div>
+                <div class="lb-pod-avatar lb-pod-avatar-1" th:text="${e['displayName'].substring(0,1).toUpperCase()}">A</div>
+                <div class="lb-pod-name" th:text="${e['displayName']}">Name</div>
+                <div class="lb-pod-xp">
+                    <span th:text="${e['xp']}">0</span> <span th:text="#{lb.xp}">XP</span>
+                </div>
+                <div class="lb-pod-medal">🥇</div>
+                <div class="lb-pod-base lb-base-1">1</div>
+            </div>
+
+            <!-- 3rd place -->
+            <div class="lb-podium-spot lb-spot-3"
+                 th:if="${#lists.size(entries) >= 3}"
+                 th:with="e=${entries[2]}"
+                 th:classappend="${currentUserId != null and e['user'].id == currentUserId} ? ' lb-you' : ''">
+                <div class="lb-pod-avatar" th:text="${e['displayName'].substring(0,1).toUpperCase()}">A</div>
+                <div class="lb-pod-name" th:text="${e['displayName']}">Name</div>
+                <div class="lb-pod-xp">
+                    <span th:text="${e['xp']}">0</span> <span th:text="#{lb.xp}">XP</span>
+                </div>
+                <div class="lb-pod-medal">🥉</div>
+                <div class="lb-pod-base lb-base-3">3</div>
+            </div>
+        </div>
+
+        <!-- ── Full ranked list (4th and below) ──────────────────────── -->
+        <div class="lb-list-section">
+            <div class="lb-list" th:if="${!#lists.isEmpty(entries)}">
+
+                <div th:each="e, stat : ${entries}"
+                     th:if="${stat.index >= 3}"
+                     class="lb-row"
+                     th:classappend="${currentUserId != null and e['user'].id == currentUserId} ? ' lb-row-you' : ''">
+
+                    <!-- Rank -->
+                    <div class="lb-row-rank" th:text="${e['rank']}">#4</div>
+
+                    <!-- Avatar initial -->
+                    <div class="lb-row-avatar" th:text="${e['displayName'].substring(0,1).toUpperCase()}">A</div>
+
+                    <!-- Name + "You" tag -->
+                    <div class="lb-row-name">
+                        <span th:text="${e['displayName']}">Name</span>
+                        <span class="lb-you-tag"
+                              th:if="${currentUserId != null and e['user'].id == currentUserId}"
+                              th:text="#{lb.you}">You</span>
+                    </div>
+
+                    <!-- Badges -->
+                    <div class="lb-row-badges">
+                        🏅 <span th:text="${e['badges']}">0</span>
+                    </div>
+
+                    <!-- XP bar + amount -->
+                    <div class="lb-row-xp-wrap">
+                        <div class="lb-row-xp-bar">
+                            <div class="lb-row-xp-fill"
+                                 th:style="'width: ' + ${entries[0]['xp'] > 0 ? (e['xp'] * 100 / entries[0]['xp']) : 0} + '%'">
+                            </div>
+                        </div>
+                        <span class="lb-row-xp-num">
+                            <span th:text="${e['xp']}">0</span>
+                            <span th:text="#{lb.xp}">XP</span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Prompt to sign in -->
+                <div sec:authorize="!isAuthenticated()" class="lb-signup-prompt">
+                    <a th:href="@{/register}" th:text="#{lb.joinPrompt}">Join to earn XP and appear here →</a>
+                </div>
+            </div>
+
+            <!-- Empty leaderboard -->
+            <div th:if="${#lists.isEmpty(entries)}" class="lb-empty">
+                <div class="lb-empty-icon">🌱</div>
+                <p th:text="#{lb.empty}">No XP earned yet — be the first!</p>
+                <a th:href="@{/categories}" class="btn btn-primary" th:text="#{lb.startLearning}">Start Learning</a>
+            </div>
+        </div>
+
+    </div>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

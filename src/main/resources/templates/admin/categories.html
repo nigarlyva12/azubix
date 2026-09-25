@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Categories - LearnHub</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navbar -->
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <div style="max-width: 1000px; margin: 0 auto; padding: 2rem;">
+
+        <!-- Breadcrumb -->
+        <div class="breadcrumb">
+            <a th:href="@{/admin}">Dashboard</a>
+            <span class="separator">/</span>
+            <span>Categories</span>
+        </div>
+
+        <div class="page-header">
+            <h1>&#128193; Manage Categories</h1>
+        </div>
+
+        <!-- Flash Messages (success/error from redirects) -->
+        <div th:if="${success}" class="alert alert-success" th:text="${success}">Success</div>
+        <div th:if="${error}" class="alert alert-error" th:text="${error}">Error</div>
+
+        <!-- Create / Edit Form -->
+        <div class="card" style="margin-bottom: 2rem;">
+            <h2 th:text="${editMode != null && editMode} ? 'Edit Category' : 'Create New Category'"
+                style="margin-bottom: 1rem;">
+                Create New Category
+            </h2>
+
+            <!--
+                The form action changes based on whether we're creating or editing.
+                In edit mode, categoryDto.id will be set.
+            -->
+            <form th:action="${editMode != null && editMode}
+                    ? @{/admin/categories/update/{id}(id=${categoryDto.id})}
+                    : @{/admin/categories/create}"
+                  method="post"
+                  th:object="${categoryDto}">
+
+                <div class="form-group">
+                    <label for="name">Category Name *</label>
+                    <input type="text" id="name" th:field="*{name}"
+                           class="form-control" placeholder="e.g., Programming, Data Structures">
+                    <p th:if="${#fields.hasErrors('name')}"
+                       th:errors="*{name}" class="form-error">Name error</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" th:field="*{description}"
+                              class="form-control" rows="3"
+                              placeholder="Brief description of this category"></textarea>
+                    <p th:if="${#fields.hasErrors('description')}"
+                       th:errors="*{description}" class="form-error">Description error</p>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem;">
+                    <button type="submit" class="btn btn-primary"
+                            th:text="${editMode != null && editMode} ? 'Update Category' : 'Create Category'">
+                        Create Category
+                    </button>
+                    <!-- Cancel button (only in edit mode) -->
+                    <a th:if="${editMode != null && editMode}"
+                       th:href="@{/admin/categories}"
+                       class="btn btn-outline">Cancel</a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Categories Table -->
+        <div class="table-container">
+            <table th:if="${!#lists.isEmpty(categories)}">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Topics</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="cat : ${categories}">
+                        <td th:text="${cat.id}">1</td>
+                        <td th:text="${cat.name}">Category</td>
+                        <td th:text="${cat.description != null ? cat.description : '-'}">Desc</td>
+                        <td th:text="${#lists.size(cat.topics)}">0</td>
+                        <td>
+                            <div class="actions">
+                                <a th:href="@{/admin/categories/edit/{id}(id=${cat.id})}"
+                                   class="btn btn-primary btn-sm">Edit</a>
+                                <form th:action="@{/admin/categories/delete/{id}(id=${cat.id})}"
+                                      method="post"
+                                      onsubmit="return confirm('Delete this category and ALL its topics and articles?');">
+                                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p th:if="${#lists.isEmpty(categories)}" style="text-align: center; color: var(--gray); padding: 2rem;">
+                No categories yet. Create one above!
+            </p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

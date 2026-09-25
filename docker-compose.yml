@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGDATABASE: learnhub
+      PGUSER: postgres
+      PGPASSWORD: 1234
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-1027048500542-dvjequ4e64u3nb1o19ecssbnv4bc76cb.apps.googleusercontent.com}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-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}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: learnhub
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  pgdata:
